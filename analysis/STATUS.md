@@ -1785,3 +1785,12 @@ folder, the layout of #43/#29/#58/#73).
 - Starter (tools/windows_starter/starter.c) waits for the launcher (#267 Steam play time);
   launcher dark title bar (#215), PlayStation touchpad labels (#214).
 - Deployed c151bcd0 (old = out/before-issues-1028.exe); package built.
+
+## 6 November 2026: authentic PS4 trophy audio & Windows thread scheduling (0.8.3)
+
+- Trophy audio: decoded 48 kHz stereo PS4 trophy unlock sound asset (`ps4_trophy_sound.h`) replacing
+  synthetic sine chime in `gow3_trophies.cpp`, with fallback for live disk overrides.
+- Windows thread priority: `GOW3_GUEST_PRIORITY=1` default boosts simulation, audio mixer, and Vulkan
+  command dispatch threads above background OS scheduler noise.
+- Launcher v1.03: 4x supersampled anti-aliased toggles and vector icons, vertical tab slide animation,
+  centered startup, and real-time log stream polling.
