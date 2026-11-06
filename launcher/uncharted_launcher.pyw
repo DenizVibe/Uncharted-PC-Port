@@ -1356,23 +1356,93 @@ class Toggle(tk.Canvas):
         w, h = int(46 * scale), int(24 * scale)
         super().__init__(parent, width=w, height=h, bg=parent["bg"], highlightthickness=0, cursor="hand2")
         self.w, self.h, self.value, self.command = w, h, bool(value), command
-        self.bind("<Button-1>", lambda e: self.set(not self.value, notify=True))
+        self.anim_pos = 1.0 if self.value else 0.0
+        self.anim_id = None
+        self.hover = False
+        self._cache = {}
+        self.bind("<Button-1>", lambda e: self.toggle())
+        self.bind("<Enter>", lambda e: self.on_hover(True))
+        self.bind("<Leave>", lambda e: self.on_hover(False))
         self.draw()
 
-    def set(self, value, notify=False):
-        self.value = bool(value)
+    def on_hover(self, state):
+        self.hover = state
         self.draw()
-        if notify:
-            self.command(self.value)
+
+    def toggle(self):
+        self.set(not self.value, notify=True)
+
+    def set(self, value, notify=False):
+        new_val = bool(value)
+        if new_val != self.value:
+            self.value = new_val
+            self.animate()
+            if notify and self.command:
+                self.command(self.value)
+        else:
+            self.anim_pos = 1.0 if self.value else 0.0
+            self.draw()
+
+    def animate(self):
+        target = 1.0 if self.value else 0.0
+        diff = target - self.anim_pos
+        if abs(diff) < 0.08:
+            self.anim_pos = target
+            self.draw()
+            self.anim_id = None
+        else:
+            self.anim_pos += diff * 0.45
+            self.draw()
+            self.anim_id = self.after(16, self.animate)
 
     def draw(self):
         self.delete("all")
-        pad = max(1, int(2 * self.s))
-        track = GOLD if self.value else LINE
-        round_rect(self, 1, 1, self.w - 1, self.h - 1, self.h // 2, fill=track, outline=track)
-        d = self.h - 2 * pad - 2
-        x = self.w - pad - d - 1 if self.value else pad + 1
-        self.create_oval(x, pad + 1, x + d, pad + 1 + d, fill=INK if self.value else MUTED, outline="")
+        q = int(round(self.anim_pos * 16))
+        key = (q, self.hover, self.w, self.h)
+        if key not in self._cache:
+            t = q / 16.0
+            s = 4  # 4x supersampling for ultra-crisp edges
+            W, H = self.w * s, self.h * s
+            img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(img)
+
+            # Track color interpolation
+            r = int(0x20 + t * (0xd4 - 0x20))
+            g = int(0x1a + t * (0xa3 - 0x1a))
+            b = int(0x14 + t * (0x62 - 0x14))
+            track_fill = (r, g, b, 255)
+
+            if t > 0.5:
+                track_outline = (229, 179, 112, 255)
+            else:
+                track_outline = (78, 62, 48, 255) if self.hover else (50, 40, 31, 255)
+
+            radius = H // 2
+            d.rounded_rectangle([1 * s, 1 * s, W - 1 * s, H - 1 * s], radius=radius,
+                                fill=track_fill, outline=track_outline, width=int(1.2 * s))
+
+            # Knob
+            pad = int(3 * self.s * s)
+            dia = H - 2 * pad
+            x_min = pad
+            x_max = W - pad - dia
+            x = x_min + t * (x_max - x_min)
+
+            kr = int(0x8a + t * (0xfb - 0x8a))
+            kg = int(0x7b + t * (0xf7 - 0x7b))
+            kb = int(0x6c + t * (0xf0 - 0x6c))
+            knob_fill = (kr, kg, kb, 255)
+
+            if t > 0.3:
+                d.ellipse([x - 1 * s, pad, x + dia + 1 * s, pad + dia + 1 * s], fill=(0, 0, 0, int(35 * t)))
+            d.ellipse([x, pad, x + dia, pad + dia], fill=knob_fill)
+
+            res = img.resize((self.w, self.h), Image.Resampling.LANCZOS)
+            self._cache[key] = ImageTk.PhotoImage(res)
+
+        photo = self._cache[key]
+        self._current_photo = photo
+        self.create_image(self.w // 2, self.h // 2, image=photo)
 
 
 class Chip(tk.Canvas):
@@ -1610,18 +1680,18 @@ class Launcher:
             self.select_game(direct, save=False)
             root.after(100, self.play_direct)
 
-    def restore_window_position(self):
-        """The window opens where it was last closed, if that spot is still on a screen."""
-        self.root.geometry(f"{self.width}x{self.height}")
-        position = self.config.get("window_xy")
-        if not (isinstance(position, list) and len(position) == 2):
-            return
-        x, y = int(position[0]), int(position[1])
+    def center_window(self):
+        """Center the launcher window in the middle of the screen."""
         self.root.update_idletasks()
-        screen_w, screen_h = self.root.winfo_vrootwidth(), self.root.winfo_vrootheight()
-        if -50 <= x <= max(0, screen_w - 200) and 0 <= y <= max(0, screen_h - 200):
-            y = min(y, max(0, self.root.winfo_screenheight() - self.height - self.px(70)))
-            self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        x = max(0, (screen_w - self.width) // 2)
+        y = max(0, (screen_h - self.height) // 2)
+        self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
+
+    def restore_window_position(self):
+        """Always start centered in the middle of the screen."""
+        self.center_window()
 
     def fit_to_screen(self):
         """More room for the settings when the screen is tall enough (fewer pages need to scroll)."""
@@ -1699,9 +1769,9 @@ class Launcher:
         hdr.pack(side="top", fill="x", padx=self.px(16), pady=(self.px(22), self.px(10)))
 
         tk.Label(hdr, text="UNCHARTED", font=("Georgia", 18, "bold"), bg="#110d0a", fg=GOLD, anchor="w").pack(side="top", fill="x")
-        tk.Label(hdr, text="NATHAN DRAKE COLLECTION", font=("Segoe UI Semibold", 8), bg="#110d0a", fg=MUTED, anchor="w").pack(side="top", fill="x", pady=(self.px(2), 0))
+        tk.Label(hdr, text="Nathan Drake Collection", font=("Segoe UI Semibold", 8), bg="#110d0a", fg=MUTED, anchor="w").pack(side="top", fill="x", pady=(self.px(2), 0))
         tk.Label(hdr, text="by Deniz", font=self.f_small, bg="#110d0a", fg="#7a6b5a", anchor="w").pack(side="top", fill="x", pady=(self.px(4), 0))
-        tk.Label(hdr, text="version 1.02", font=("Segoe UI", 8), bg="#110d0a", fg="#5c4f42", anchor="w").pack(side="top", fill="x", pady=(self.px(1), 0))
+        tk.Label(hdr, text="version 1.03", font=("Segoe UI", 8), bg="#110d0a", fg="#5c4f42", anchor="w").pack(side="top", fill="x", pady=(self.px(1), 0))
 
         # Thin separator
         tk.Frame(self.sidebar, bg="#221a14", height=1).pack(side="top", fill="x", padx=self.px(14), pady=(self.px(10), self.px(12)))
@@ -1722,14 +1792,14 @@ class Launcher:
         if multiplayer_preview():
             tabs.append(("multiplayer", "Multiplayer"))
 
+        self.tab_order = [t[0] for t in tabs]
+
         for name, label in tabs:
             cell = tk.Frame(self.sidebar, bg="#110d0a", cursor="hand2")
             cell.pack(side="top", fill="x", padx=self.px(10), pady=self.px(2))
-            bar = tk.Frame(cell, bg="#110d0a", width=max(3, self.px(3)))
-            bar.pack(side="left", fill="y")
             icon_canvas = tk.Canvas(cell, width=self.px(22), height=self.px(22), bg="#110d0a",
                                     highlightthickness=0, cursor="hand2")
-            icon_canvas.pack(side="left", padx=(self.px(8), self.px(6)))
+            icon_canvas.pack(side="left", padx=(self.px(12), self.px(8)))
             text = tk.Label(cell, text=label, font=self.f_tab, bg="#110d0a", fg=MUTED, anchor="w", cursor="hand2")
             text.pack(side="left", fill="x", expand=True, padx=(0, self.px(8)), pady=self.px(8))
 
@@ -1740,15 +1810,8 @@ class Launcher:
                 widget.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
                 widget.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
 
-            self.tab_buttons[name] = (cell, bar, icon_canvas, text)
+            self.tab_buttons[name] = (cell, icon_canvas, text)
             self.tab_cells[name] = cell
-
-        # Sidebar footer note
-        sb_ftr = tk.Frame(self.sidebar, bg="#110d0a")
-        sb_ftr.pack(side="bottom", fill="x", padx=self.px(16), pady=self.px(16))
-        tk.Label(sb_ftr, text="Native port: the original PS4 game code runs directly on Windows.",
-                 font=("Segoe UI", 8), bg="#110d0a", fg="#635443", justify="left",
-                 wraplength=self.px(180)).pack(side="bottom", fill="x")
 
     def build_main_pane(self):
         self.main_pane = tk.Frame(self.container, bg=BG)
@@ -1765,10 +1828,6 @@ class Launcher:
         hint_lbl = tk.Label(sub_inner, text="UNCHARTED PC PORT  •  NATIVE 64-BIT", font=("Segoe UI Semibold", 8),
                             bg="#14100c", fg=GOLD, anchor="w")
         hint_lbl.pack(side="left", fill="y")
-
-        self.breadcrumb_lbl = tk.Label(sub_inner, text="", font=("Georgia", 11, "bold"),
-                                       bg="#14100c", fg=TEXT, anchor="e")
-        self.breadcrumb_lbl.pack(side="right", fill="y")
 
         tk.Frame(self.main_pane, bg=LINE, height=1).pack(side="top", fill="x")
 
@@ -1814,7 +1873,7 @@ class Launcher:
         gap = self.px(16)
         avail = self.width - self.px(220) - self.px(28) * 2
         card_w = (avail - (columns - 1) * gap) // columns
-        card_h = self.px(98)
+        card_h = self.px(82)
 
         for i, game in enumerate(GAMES):
             cards_frame.columnconfigure(i, weight=1)
@@ -1897,14 +1956,34 @@ class Launcher:
         sec_presets.pack(side="top", fill="x", pady=(0, self.px(4)))
 
         self.setup_intro = tk.Label(page, text="", font=self.f_body, bg=BG, fg=MUTED, anchor="w")
-        self.setup_intro.pack(side="top", fill="x", pady=(0, self.px(10)))
+        self.setup_intro.pack(side="top", fill="x", pady=(0, self.px(12)))
 
+        # 3 Game Selector Cards (matching Play tab style, no 01 02 03 box)
+        game_cards_frame = tk.Frame(page, bg=BG)
+        game_cards_frame.pack(side="top", fill="x", pady=(0, self.px(16)))
+
+        self.preset_game_cards = {}
+        columns = 3
+        gap = self.px(14)
+        avail_w = self.width - self.px(220) - self.px(28) - self.px(20) - self.px(16)
+        card_w = (avail_w - (columns - 1) * gap) // columns
+        card_h = self.px(82)
+
+        for i, game in enumerate(GAMES):
+            game_cards_frame.columnconfigure(i, weight=1)
+            canvas = tk.Canvas(game_cards_frame, width=card_w, height=card_h, bg=BG, highlightthickness=0, cursor="hand2")
+            canvas.grid(row=0, column=i, padx=(0 if i == 0 else gap, 0), sticky="ew")
+            canvas.bind("<Button-1>", lambda e, k=game["key"]: self.on_preset_game_change(k))
+            canvas.bind("<Enter>", lambda e, k=game["key"]: self.draw_card(k, hover=True))
+            canvas.bind("<Leave>", lambda e, k=game["key"]: self.draw_card(k))
+            self.preset_game_cards[game["key"]] = (canvas, game, card_w, card_h)
+
+        # 5 Quality Presets Grid
         grid = tk.Frame(page, bg=BG)
         grid.pack(side="top", fill="x")
         self.preset_cards = {}
         p_gap = self.px(14)
         p_cols = 3
-        avail_w = self.width - self.px(220) - self.px(28) - self.px(20) - self.px(16)
         p_w = (avail_w - (p_cols - 1) * p_gap) // p_cols
         p_h = self.px(130)
         for i, name in enumerate(PRESET_ORDER):
@@ -1922,6 +2001,9 @@ class Launcher:
         self.root.after_idle(self.redraw_presets)
         return page
 
+    def on_preset_game_change(self, key):
+        self.select_game(key)
+
     def toggle_library_fullscreen(self, enabled):
         mode = "fullscreen" if enabled else "windowed"
         self.change("display_mode", mode)
@@ -1929,45 +2011,32 @@ class Launcher:
             self.widgets["display_mode"].set(mode)
 
     def draw_card(self, key, hover=False):
-        if key not in getattr(self, "cards", {}):
-            return
-        canvas, game, w, h = self.cards[key]
-        selected = key == self.config.get("game")
-        canvas.delete("all")
+        for card_dict in (getattr(self, "cards", {}), getattr(self, "preset_game_cards", {})):
+            if key not in card_dict:
+                continue
+            canvas, game, w, h = card_dict[key]
+            selected = key == self.config.get("game")
+            canvas.delete("all")
 
-        fill = "#1c1611" if selected else ("#18130e" if hover else "#130f0c")
-        outline = GOLD if selected else ("#4a3726" if hover else "#241c14")
-        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if selected else 1)
+            fill = "#1c1611" if selected else ("#18130e" if hover else "#130f0c")
+            outline = GOLD if selected else ("#4a3726" if hover else "#241c14")
+            round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if selected else 1)
 
-        # Left Number badge (01, 02, 03)
-        box_w = self.px(42)
-        box_h = self.px(42)
-        bx1 = self.px(16)
-        by1 = (h - box_h) // 2
-        bx2 = bx1 + box_w
-        by2 = by1 + box_h
-        round_rect(canvas, bx1, by1, bx2, by2, self.px(6),
-                   fill="#292017" if selected else "#1a140f",
-                   outline=GOLD if selected else "#35271a", width=1)
-        num_str = f"0{game['number']}"
-        canvas.create_text((bx1 + bx2) // 2, (by1 + by2) // 2, text=num_str, font=("Georgia", 14, "bold"),
-                           fill=GOLD if selected else MUTED, anchor="center")
+            tx = self.px(18)
+            # Line 1: Title
+            canvas.create_text(tx, self.px(24), text=game["title"], font=self.f_card_title,
+                               fill=GOLD if selected else TEXT, anchor="w")
 
-        tx = self.px(72)
-        # Line 1: Title
-        canvas.create_text(tx, self.px(30), text=game["title"], font=self.f_card_title,
-                           fill=GOLD if selected else TEXT, anchor="w")
+            # Line 2: Subtitle
+            canvas.create_text(tx, self.px(44), text=game.get("tagline", f"UNCHARTED {game['number']}"),
+                               font=("Segoe UI Semibold", 8), fill=MUTED, anchor="w")
 
-        # Line 2: Subtitle
-        canvas.create_text(tx, self.px(54), text=game.get("tagline", f"UNCHARTED {game['number']}"),
-                           font=("Segoe UI Semibold", 8), fill=MUTED, anchor="w")
-
-        # Line 3: Setting indicator
-        settings = self.config.get("games", {}).get(key, {})
-        preset = str(settings.get("preset", "Medium")).capitalize()
-        res = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p"))).upper()
-        canvas.create_text(tx, self.px(74), text=f"{preset} Preset  •  {res}",
-                           font=self.f_small, fill=GOLD if selected else DIM, anchor="w")
+            # Line 3: Setting indicator
+            settings = self.config.get("games", {}).get(key, {})
+            preset = str(settings.get("preset", "Medium")).capitalize()
+            res = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p"))).upper()
+            canvas.create_text(tx, self.px(62), text=f"{preset} Preset  •  {res}",
+                               font=self.f_small, fill=GOLD if selected else DIM, anchor="w")
 
     def page_log(self):
         page = self.page(scroll=False)
@@ -1976,31 +2045,49 @@ class Launcher:
 
         tk.Label(bar, text="Runtime Log", font=self.f_card_title, bg=BG, fg=TEXT).pack(side="left")
 
+        # Live indicator pill
+        self.log_live_lbl = tk.Label(bar, text="● LIVE", font=("Segoe UI Semibold", 8), bg=BG, fg=ACCENT_GREEN)
+        self.log_live_lbl.pack(side="left", padx=(self.px(12), 0))
+
         btn_open = tk.Label(bar, text="Open Log File", font=self.f_small, bg=PANEL, fg=TEXT,
                             padx=self.px(10), pady=self.px(4), cursor="hand2",
                             highlightthickness=1, highlightbackground=LINE)
         btn_open.pack(side="right", padx=(self.px(6), 0))
         btn_open.bind("<Button-1>", lambda e: self.open_log_file())
+        btn_open.bind("<Enter>", lambda e, b=btn_open: b.config(bg=PANEL_HI, highlightbackground=GOLD, fg=GOLD))
+        btn_open.bind("<Leave>", lambda e, b=btn_open: b.config(bg=PANEL, highlightbackground=LINE, fg=TEXT))
 
         btn_folder = tk.Label(bar, text="Open Folder", font=self.f_small, bg=PANEL, fg=TEXT,
                               padx=self.px(10), pady=self.px(4), cursor="hand2",
                               highlightthickness=1, highlightbackground=LINE)
         btn_folder.pack(side="right", padx=(self.px(6), 0))
         btn_folder.bind("<Button-1>", lambda e: self.open_logs())
+        btn_folder.bind("<Enter>", lambda e, b=btn_folder: b.config(bg=PANEL_HI, highlightbackground=GOLD, fg=GOLD))
+        btn_folder.bind("<Leave>", lambda e, b=btn_folder: b.config(bg=PANEL, highlightbackground=LINE, fg=TEXT))
 
-        btn_ref = tk.Label(bar, text="Refresh", font=self.f_small, bg=PANEL, fg=TEXT,
+        btn_ref = tk.Label(bar, text="Clear", font=self.f_small, bg=PANEL, fg=TEXT,
                            padx=self.px(10), pady=self.px(4), cursor="hand2",
                            highlightthickness=1, highlightbackground=LINE)
         btn_ref.pack(side="right")
-        btn_ref.bind("<Button-1>", lambda e: self.refresh_log_viewer())
+        btn_ref.bind("<Button-1>", lambda e: self.clear_log_view())
+        btn_ref.bind("<Enter>", lambda e, b=btn_ref: b.config(bg=PANEL_HI, highlightbackground=GOLD, fg=GOLD))
+        btn_ref.bind("<Leave>", lambda e, b=btn_ref: b.config(bg=PANEL, highlightbackground=LINE, fg=TEXT))
 
         import tkinter.scrolledtext as st
         self.log_text = st.ScrolledText(page, bg="#0a0806", fg="#d4c5b3", insertbackground=GOLD,
                                         font=("Consolas", 9), wrap="word", highlightthickness=1,
                                         highlightbackground=LINE)
         self.log_text.pack(side="top", fill="both", expand=True)
+        self.log_file_pos = 0
+        self.log_tracked_path = None
         self.refresh_log_viewer()
         return page
+
+    def clear_log_view(self):
+        if hasattr(self, "log_text"):
+            self.log_text.config(state="normal")
+            self.log_text.delete("1.0", "end")
+            self.log_text.config(state="disabled")
 
     def open_log_file(self):
         log = self.latest_log()
@@ -2009,22 +2096,53 @@ class Launcher:
         else:
             messagebox.showinfo(APP_TITLE, "No log file found yet. Run the game first.")
 
+    def poll_realtime_log(self):
+        if getattr(self, "current_tab", None) != "log" or not hasattr(self, "log_text"):
+            return
+        log = self.latest_log()
+        if log and log.exists():
+            try:
+                current_size = log.stat().st_size
+                if log != getattr(self, "log_tracked_path", None):
+                    self.refresh_log_viewer()
+                elif current_size > getattr(self, "log_file_pos", 0):
+                    with open(log, "r", encoding="utf-8", errors="replace") as f:
+                        f.seek(self.log_file_pos)
+                        new_data = f.read()
+                        self.log_file_pos = f.tell()
+                    if new_data:
+                        self.log_text.config(state="normal")
+                        self.log_text.insert("end", new_data)
+                        self.log_text.see("end")
+                        self.log_text.config(state="disabled")
+            except Exception:
+                pass
+        self.log_poll_id = self.root.after(400, self.poll_realtime_log)
+
     def refresh_log_viewer(self):
         if not hasattr(self, "log_text"):
             return
         log = self.latest_log()
+        self.log_tracked_path = log
         self.log_text.config(state="normal")
         self.log_text.delete("1.0", "end")
         if log and log.exists():
             try:
+                size = log.stat().st_size
                 with open(log, "r", encoding="utf-8", errors="replace") as f:
-                    lines = f.readlines()
-                self.log_text.insert("end", "".join(lines[-300:]))
+                    if size > 65536:
+                        f.seek(size - 65536)
+                        f.readline()
+                    lines = f.read()
+                    self.log_file_pos = f.tell()
+                self.log_text.insert("end", lines)
                 self.log_text.see("end")
             except Exception as e:
                 self.log_text.insert("end", f"Error reading log file: {e}\n")
+                self.log_file_pos = 0
         else:
             self.log_text.insert("end", "No log output yet. Launch a game to generate logs.\n")
+            self.log_file_pos = 0
         self.log_text.config(state="disabled")
 
     def select_game(self, key, save=True):
@@ -2034,15 +2152,14 @@ class Launcher:
         self.config["game"] = key
         for k in getattr(self, "cards", {}):
             self.draw_card(k)
+        for k in getattr(self, "preset_game_cards", {}):
+            self.draw_card(k)
         if save:
             write_config(self.config)
         if changed:
             self.reload_ini()
             self.refresh_controls()
         curr = self.current_game()
-        if hasattr(self, "breadcrumb_lbl"):
-            tagline = curr.get("tagline", f"UNCHARTED {curr['number']} • {curr.get('year', '')}")
-            self.breadcrumb_lbl.config(text=f"{curr['title']}  •  {tagline}")
         if hasattr(self, "status") and not self.process:
             self.set_status(f"Ready to play {curr['name']}.")
         self.update_multiplayer_tab()
@@ -2191,61 +2308,91 @@ class Launcher:
     def current_game(self):
         return next(g for g in GAMES if g["key"] == self.config.get("game"))
 
+    def get_sidebar_icon_photo(self, name, color, size):
+        if not hasattr(self, "_icon_photo_cache"):
+            self._icon_photo_cache = {}
+        key = (name, color, size)
+        if key in self._icon_photo_cache:
+            return self._icon_photo_cache[key]
+
+        if color.startswith("#") and len(color) == 7:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            col = (r, g, b, 255)
+        else:
+            col = (212, 163, 98, 255)
+
+        s = 4  # 4x supersampling for razor-sharp antialiasing
+        W, H = size * s, size * s
+        img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+
+        if name == "play":
+            d.polygon([(7 * s, 5 * s), (7 * s, 17 * s), (17 * s, 11 * s)], fill=col)
+        elif name == "presets":
+            lw = int(1.4 * s)
+            d.line([(4 * s, 6 * s), (18 * s, 6 * s)], fill=col, width=lw)
+            d.rounded_rectangle([12 * s, 4 * s, 16 * s, 8 * s], radius=int(1.5 * s), fill=col)
+            d.line([(4 * s, 11 * s), (18 * s, 11 * s)], fill=col, width=lw)
+            d.rounded_rectangle([6 * s, 9 * s, 10 * s, 13 * s], radius=int(1.5 * s), fill=col)
+            d.line([(4 * s, 16 * s), (18 * s, 16 * s)], fill=col, width=lw)
+            d.rounded_rectangle([13 * s, 14 * s, 17 * s, 18 * s], radius=int(1.5 * s), fill=col)
+        elif name == "display":
+            lw = int(1.4 * s)
+            d.rounded_rectangle([3 * s, 4 * s, 19 * s, 15 * s], radius=int(1.5 * s), outline=col, width=lw)
+            d.line([(11 * s, 15 * s), (11 * s, 18 * s)], fill=col, width=lw)
+            d.line([(7 * s, 18 * s), (15 * s, 18 * s)], fill=col, width=lw)
+        elif name == "performance":
+            pts = [(12 * s, 3 * s), (6 * s, 11 * s), (11 * s, 11 * s), (9 * s, 19 * s), (16 * s, 10 * s), (12 * s, 10 * s)]
+            d.polygon(pts, fill=col)
+        elif name == "controls":
+            lw = int(1.4 * s)
+            d.rounded_rectangle([3 * s, 6 * s, 19 * s, 16 * s], radius=int(4 * s), outline=col, width=lw)
+            d.line([(6 * s, 11 * s), (10 * s, 11 * s)], fill=col, width=lw)
+            d.line([(8 * s, 9 * s), (8 * s, 13 * s)], fill=col, width=lw)
+            d.ellipse([13 * s, 10 * s, 15 * s, 12 * s], fill=col)
+            d.ellipse([15 * s, 8 * s, 17 * s, 10 * s], fill=col)
+        elif name == "cheats":
+            pts = [(11 * s, 2 * s), (13 * s, 8 * s), (19 * s, 11 * s), (13 * s, 14 * s), (11 * s, 20 * s), (9 * s, 14 * s), (3 * s, 11 * s), (9 * s, 8 * s)]
+            d.polygon(pts, fill=col)
+        elif name == "advanced":
+            lw = int(1.8 * s)
+            d.ellipse([4 * s, 4 * s, 18 * s, 18 * s], outline=col, width=lw)
+            d.ellipse([9 * s, 9 * s, 13 * s, 13 * s], fill=col)
+        elif name == "log":
+            lw = int(1.4 * s)
+            d.rounded_rectangle([3 * s, 4 * s, 19 * s, 18 * s], radius=int(2 * s), outline=col, width=lw)
+            d.line([(6 * s, 8.5 * s), (9.5 * s, 11 * s)], fill=col, width=lw)
+            d.line([(9.5 * s, 11 * s), (6 * s, 13.5 * s)], fill=col, width=lw)
+            d.line([(11.5 * s, 14 * s), (16 * s, 14 * s)], fill=col, width=lw)
+        elif name == "multiplayer":
+            d.ellipse([6 * s, 5 * s, 11 * s, 10 * s], fill=col)
+            d.ellipse([12 * s, 6 * s, 16 * s, 10 * s], fill=col)
+            d.pieslice([4 * s, 11 * s, 13 * s, 20 * s], start=180, end=0, fill=col)
+            d.pieslice([11 * s, 12 * s, 18 * s, 19 * s], start=180, end=0, fill=col)
+
+        res = img.resize((size, size), Image.Resampling.LANCZOS)
+        photo = ImageTk.PhotoImage(res)
+        self._icon_photo_cache[key] = photo
+        return photo
+
     def draw_sidebar_icon(self, name, canvas, color):
         canvas.delete("all")
-        s = self.s
-        def p(coord):
-            return int(coord * s)
-        if name == "play":
-            canvas.create_polygon(p(7), p(5), p(7), p(17), p(17), p(11), fill=color, outline=color)
-        elif name == "presets":
-            lw = max(1, int(1.2 * s))
-            canvas.create_line(p(4), p(6), p(18), p(6), fill=color, width=lw)
-            canvas.create_rectangle(p(12), p(4), p(15), p(8), fill=color, outline=color)
-            canvas.create_line(p(4), p(11), p(18), p(11), fill=color, width=lw)
-            canvas.create_rectangle(p(7), p(9), p(10), p(13), fill=color, outline=color)
-            canvas.create_line(p(4), p(16), p(18), p(16), fill=color, width=lw)
-            canvas.create_rectangle(p(13), p(14), p(16), p(18), fill=color, outline=color)
-        elif name == "display":
-            canvas.create_rectangle(p(3), p(4), p(19), p(15), outline=color, width=max(1, int(1.2 * s)))
-            canvas.create_line(p(11), p(15), p(11), p(18), fill=color, width=max(1, int(1.2 * s)))
-            canvas.create_line(p(7), p(18), p(15), p(18), fill=color, width=max(1, int(1.2 * s)))
-        elif name == "performance":
-            pts = [p(12), p(3), p(6), p(11), p(11), p(11), p(9), p(19), p(16), p(10), p(12), p(10)]
-            canvas.create_polygon(pts, fill=color, outline=color)
-        elif name == "controls":
-            canvas.create_oval(p(3), p(6), p(19), p(16), outline=color, width=max(1, int(1.2 * s)))
-            canvas.create_line(p(6), p(11), p(10), p(11), fill=color, width=max(1, int(1.2 * s)))
-            canvas.create_line(p(8), p(9), p(8), p(13), fill=color, width=max(1, int(1.2 * s)))
-            canvas.create_oval(p(13), p(10), p(15), p(12), fill=color, outline=color)
-            canvas.create_oval(p(15), p(8), p(17), p(10), fill=color, outline=color)
-        elif name == "cheats":
-            pts = [p(11), p(3), p(13), p(9), p(19), p(11), p(13), p(13), p(11), p(19), p(9), p(13), p(3), p(11), p(9), p(9)]
-            canvas.create_polygon(pts, fill=color, outline=color)
-        elif name == "advanced":
-            canvas.create_oval(p(5), p(5), p(17), p(17), outline=color, width=max(1, int(2 * s)))
-            canvas.create_oval(p(9), p(9), p(13), p(13), fill=color, outline=color)
-        elif name == "log":
-            canvas.create_polygon(p(5), p(3), p(13), p(3), p(17), p(7), p(17), p(19), p(5), p(19),
-                                  outline=color, width=max(1, int(1.2 * s)), fill="")
-            canvas.create_line(p(8), p(9), p(14), p(9), fill=color, width=1)
-            canvas.create_line(p(8), p(12), p(14), p(12), fill=color, width=1)
-            canvas.create_line(p(8), p(15), p(12), p(15), fill=color, width=1)
-        elif name == "multiplayer":
-            canvas.create_oval(p(6), p(6), p(11), p(11), fill=color, outline=color)
-            canvas.create_oval(p(12), p(7), p(16), p(11), fill=color, outline=color)
-            canvas.create_arc(p(4), p(12), p(13), p(20), start=0, extent=180, fill=color, outline=color)
-            canvas.create_arc(p(11), p(13), p(18), p(20), start=0, extent=180, fill=color, outline=color)
+        sz = self.px(22)
+        photo = self.get_sidebar_icon_photo(name, color, sz)
+        canvas._current_icon = photo
+        canvas.create_image(sz // 2, sz // 2, image=photo)
 
     def hover_tab(self, name, enter):
         if getattr(self, "current_tab", None) != name and name in getattr(self, "tab_buttons", {}):
-            cell, bar, icon_canvas, text = self.tab_buttons[name]
-            bg = "#19130e" if enter else "#110d0a"
-            fg = TEXT if enter else MUTED
+            cell, icon_canvas, text = self.tab_buttons[name]
+            bg = "#18120d" if enter else "#110d0a"
+            fg = "#dfd3c5" if enter else MUTED
             cell.config(bg=bg)
             icon_canvas.config(bg=bg)
             text.config(bg=bg, fg=fg)
-            self.draw_sidebar_icon(name, icon_canvas, GOLD if enter else MUTED)
+            self.draw_sidebar_icon(name, icon_canvas, "#d4a362" if enter else MUTED)
 
     def show_tab(self, name, save=True):
         if name == "setup":
@@ -2254,30 +2401,82 @@ class Launcher:
             name = "play"
         if name not in self.pages:
             name = "play"
+
+        old_tab = getattr(self, "current_tab", None)
         self.current_tab = name
+
         if name == "multiplayer" and not getattr(self, "net_searched", False):
             self.net_searched = True
             self.root.after(300, self.search_net_games)
+
+        # Real-time log streaming management
+        if hasattr(self, "log_poll_id") and self.log_poll_id:
+            try:
+                self.root.after_cancel(self.log_poll_id)
+            except Exception:
+                pass
+            self.log_poll_id = None
         if name == "log":
             self.refresh_log_viewer()
+            self.poll_realtime_log()
+
         if save and self.config.get("tab") != name:
             self.config["tab"] = name
             write_config(self.config)
-        for tab, (cell, bar, icon_canvas, text) in self.tab_buttons.items():
+
+        # Modernized sidebar tabs styling
+        for tab, (cell, icon_canvas, text) in self.tab_buttons.items():
             active = tab == name
-            c_bg = "#221a12" if active else "#110d0a"
+            c_bg = "#211811" if active else "#110d0a"
             c_fg = GOLD if active else MUTED
-            bar.config(bg=GOLD if active else "#110d0a")
             cell.config(bg=c_bg)
             icon_canvas.config(bg=c_bg)
-            text.config(bg=c_bg, fg=TEXT if active else MUTED, font=self.f_body_bold if active else self.f_tab)
+            text.config(bg=c_bg, fg="#fdfaf6" if active else MUTED, font=self.f_body_bold if active else self.f_tab)
             self.draw_sidebar_icon(tab, icon_canvas, c_fg)
-        for tab, page in self.pages.items():
-            holder = getattr(page, "holder", page)
-            if tab == name:
-                holder.pack(fill="both", expand=True)
+
+        # Tab slide transition animation
+        order = getattr(self, "tab_order", ["play", "presets", "display", "performance", "controls", "cheats", "advanced", "log"])
+        dir_val = 1
+        try:
+            if old_tab in order and name in order:
+                dir_val = 1 if order.index(name) >= order.index(old_tab) else -1
+        except Exception:
+            dir_val = 1
+
+        old_page = self.pages.get(old_tab) if old_tab else None
+        new_page = self.pages[name]
+        self.transition_tab(old_page, new_page, dir_val)
+
+    def transition_tab(self, old_page, new_page, direction=1):
+        if getattr(self, "tab_anim_id", None):
+            try:
+                self.root.after_cancel(self.tab_anim_id)
+            except Exception:
+                pass
+            self.tab_anim_id = None
+
+        new_holder = getattr(new_page, "holder", new_page)
+        old_holder = getattr(old_page, "holder", old_page) if old_page else None
+
+        if old_holder is None or old_holder == new_holder:
+            new_holder.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+            return
+
+        new_holder.lift()
+        start_y = self.px(18) * direction
+        offsets = [int(start_y * f) for f in (1.0, 0.52, 0.22, 0.06, 0.0)]
+
+        def step(idx=0):
+            if idx < len(offsets):
+                new_holder.place(x=0, y=offsets[idx], relwidth=1.0, relheight=1.0)
+                self.tab_anim_id = self.root.after(16, lambda: step(idx + 1))
             else:
-                holder.pack_forget()
+                new_holder.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+                self.tab_anim_id = None
+                if old_holder and old_holder != new_holder:
+                    old_holder.place_forget()
+
+        step(0)
 
     def wheel(self, event):
         """The mouse wheel scrolls the page under the pointer, when it is taller than the window."""
@@ -2381,6 +2580,8 @@ class Launcher:
             canvas.tag_lower(pill, badge)
 
     def redraw_presets(self):
+        for key in getattr(self, "preset_game_cards", {}):
+            self.draw_card(key)
         for name in self.preset_cards:
             self.draw_preset(name)
         if self.recommended:
@@ -3369,8 +3570,6 @@ class Launcher:
 
         status_row = tk.Frame(left, bg="#14100c")
         status_row.pack(side="top", fill="x")
-        self.status_dot = tk.Label(status_row, text="●", font=("Segoe UI", 11), bg="#14100c", fg=ACCENT_GREEN)
-        self.status_dot.pack(side="left", padx=(0, self.px(8)))
         self.status = tk.Label(status_row, text="", font=self.f_body_bold, bg="#14100c", fg=TEXT, anchor="w")
         self.status.pack(side="left", fill="x")
 
@@ -3446,16 +3645,6 @@ class Launcher:
         self.status.config(text=text)
         if detail is not None:
             self.substatus.config(text=detail)
-        if hasattr(self, "status_dot"):
-            lower = text.lower()
-            if self.process is not None or "playing" in lower:
-                self.status_dot.config(fg="#4ea8de")  # Cyan / active
-            elif "starting" in lower or "preparing" in lower:
-                self.status_dot.config(fg=ACCENT_AMBER)
-            elif "froze" in lower or "stopped" in lower or "error" in lower:
-                self.status_dot.config(fg=STOP_RED)
-            else:
-                self.status_dot.config(fg=ACCENT_GREEN)
 
     # -- updates (launcher/updater.py) ------------------------------------------------------
 

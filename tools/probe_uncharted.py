@@ -1734,6 +1734,8 @@ def run_game(args, game, executable, guest_args, loadexec, app0=None, overlays=(
     env.setdefault("GOW3_DRAW_PIPE", "0")
     env.setdefault("GOW3_VK_RECORD_THREAD", "0")
     env.setdefault("GOW3_NATIVE_TSC", "1")
+    # Windows thread priority: audio, command and simulation threads receive elevated host priority
+    env.setdefault("GOW3_GUEST_PRIORITY", "1")
     # Grey-world diagnosis: timestamped opens/reads of level packs and streams (boot.log).
     # env.setdefault("GOW3_FILE_TRACE", ".pak")  # pack read trace (grey-world diagnosis, done)
     # Frame captures on demand: write a pass count (e.g. 600) into this file; captures land in

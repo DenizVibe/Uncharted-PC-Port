@@ -9,8 +9,10 @@
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <vector>
 #include <SDL3/SDL.h>
 #include "gow3_overlay.h"
+#include "ps4_trophy_sound.h"
 
 namespace Gow3Trophies {
 namespace {
@@ -86,7 +88,7 @@ std::vector<int> Ids() {
     return ids;
 }
 
-// Two soft bell notes, our own sound, on the default output (the runtime opened SDL audio).
+// Authentic PS4 trophy unlock sound on the default output (the runtime opened SDL audio).
 // GOW3_TROPHY_SOUND=0: none.
 void Chime() {
     static const bool enabled = [] {
@@ -108,25 +110,43 @@ void Chime() {
     if (!stream) {
         return;
     }
-    constexpr int Rate = 48000;
-    constexpr float Pi = 3.14159265f;
-    const int frames = Rate * 11 / 10;
-    std::vector<float> pcm(size_t(frames) * 2, 0.0f);
-    const struct {
-        float start, hz;
-    } notes[] = {{0.0f, 1318.5f}, {0.14f, 1975.5f}}; // E6, B6
-    for (const auto& note : notes) {
-        const int first = int(note.start * Rate);
-        for (int i = first; i < frames; ++i) {
-            const float t = float(i - first) / Rate;
-            const float envelope = std::min(t / 0.004f, 1.0f) * std::exp(-t / 0.22f);
-            const float v = 0.09f * envelope *
-                            (std::sin(2 * Pi * note.hz * t) + 0.25f * std::sin(4 * Pi * note.hz * t));
-            pcm[size_t(i) * 2] += v;
-            pcm[size_t(i) * 2 + 1] += v;
+
+    bool played_custom = false;
+    const char* custom_paths[] = {
+        "user/custom_trophy/trophy.wav",
+        "u3mp/assets/ps4-trophy.wav",
+    };
+    for (const char* path : custom_paths) {
+        SDL_AudioSpec wav_spec{};
+        Uint8* wav_buf = nullptr;
+        Uint32 wav_len = 0;
+        if (SDL_LoadWAV(path, &wav_spec, &wav_buf, &wav_len)) {
+            const SDL_AudioSpec target_spec{SDL_AUDIO_F32, 2, 48000};
+            SDL_AudioStream* converter = SDL_CreateAudioStream(&wav_spec, &target_spec);
+            if (converter) {
+                SDL_PutAudioStreamData(converter, wav_buf, int(wav_len));
+                SDL_FlushAudioStream(converter);
+                const int conv_bytes = SDL_GetAudioStreamAvailable(converter);
+                if (conv_bytes > 0) {
+                    std::vector<char> converted(size_t(conv_bytes));
+                    if (SDL_GetAudioStreamData(converter, converted.data(), conv_bytes) > 0) {
+                        SDL_PutAudioStreamData(stream, converted.data(), conv_bytes);
+                        played_custom = true;
+                    }
+                }
+                SDL_DestroyAudioStream(converter);
+            }
+            SDL_free(wav_buf);
+            if (played_custom) {
+                break;
+            }
         }
     }
-    SDL_PutAudioStreamData(stream, pcm.data(), int(pcm.size() * sizeof(float)));
+
+    if (!played_custom) {
+        // Authentic PS4 trophy unlock chime from embedded PCM samples
+        SDL_PutAudioStreamData(stream, TrophySoundPcm, int(sizeof(TrophySoundPcm)));
+    }
 }
 
 } // namespace

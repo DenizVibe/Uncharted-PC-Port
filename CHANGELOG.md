@@ -4,6 +4,24 @@ Uncharted: The Nathan Drake Collection PC port, by **Deniz**
 ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)).
 Technical details of every item: [analysis/STATUS.md](analysis/STATUS.md).
 
+## 6 November 2026 (0.8.3)
+
+- **Authentic PS4 Trophy Unlock Sound**:
+  - Replaced the synthetic two-frequency chime with the real PS4 trophy unlock sound.
+  - Decoded 48 kHz stereo PCM samples are embedded directly into the runtime (`ps4_trophy_sound.h`), with automatic fallback support for custom overrides in `user/custom_trophy/` or `u3mp/assets/`.
+- **Windows Real-Time Thread Prioritization**:
+  - Enabled `GOW3_GUEST_PRIORITY=1` by default in `probe_uncharted.py`.
+  - Windows elevates simulation, audio mixer, and Vulkan command dispatch threads to `THREAD_PRIORITY_ABOVE_NORMAL` and `THREAD_PRIORITY_HIGHEST`, shielding the game from micro-stutters and audio crackling caused by background OS scheduler interruptions.
+- **Supersampled Anti-Aliased UI & Smooth Tab Transitions**:
+  - Toggles and sidebar icons rendered using 4x supersampling with Lanczos resampling, eliminating jagged edges.
+  - Animated toggle switch animations and vertical sliding transitions between launcher tabs.
+  - Live real-time log streaming viewer with automatic polling and auto-scroll.
+- **Polished Sidebar & Navigation**:
+  - Centered window startup on the primary display.
+  - Aligned all sidebar icons into a uniform column without bookmark bar displacement.
+  - Redesigned the Log tab icon into a clean CLI terminal prompt (`>_`).
+  - Title case collection branding (`Nathan Drake Collection`) and removed redundant breadcrumbs/footers.
+
 ## 6 November 2026 (0.8.2)
 
 - **Redesigned Launcher UI & Experience**:
