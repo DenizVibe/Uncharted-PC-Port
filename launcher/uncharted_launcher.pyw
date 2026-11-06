@@ -149,10 +149,8 @@ APP_TITLE = "Uncharted: The Nathan Drake Collection"
 CREDITS = ("Credits: DLSS and DLAA use NVIDIA DLSS technology. NVIDIA, RTX and DLSS are trademarks of "
            "NVIDIA Corporation. AMD FidelityFX Super Resolution (FSR 3.1, FSR 4) by AMD. Uncharted camera "
            "motion for anti-aliasing after SuperMedo's Uncharted port.")
-# The author's links in the launcher header: label, address, color, hover color.
-LINKS = (("Patreon", "https://www.patreon.com/c/bilalreloaded", "#f96854", "#ff7f6e"),
-         ("YouTube", "https://www.youtube.com/@BilalReloaded/videos", "#d6302a", "#ef4038"),
-         ("GitHub", "https://github.com/DenizVibe/Uncharted-PC-Port", "#24292f", "#3a4048"))
+# The repository link in the launcher header: label, address, color, hover color.
+LINKS = (("GitHub", "https://github.com/DenizVibe/Uncharted-PC-Port", "#24292f", "#3a4048"),)
 
 def multiplayer_preview():
     """The Multiplayer page (Uncharted 2 over the network, 25 Oct 2026) is hidden until it
