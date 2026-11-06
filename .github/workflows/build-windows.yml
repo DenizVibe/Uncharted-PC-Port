@@ -1,3 +1,4 @@
+# Uncharted: The Nathan Drake Collection PC port - CI/CD Release Automation
 # Builds the runtime with MSYS2 CLANG64 and packages Uncharted-windows (launcher, Python, runtime and
 # DLLs; no game files). The package is the workflow artifact "Uncharted-windows". A pushed tag
 # vX.Y.Z (tools/release.sh) also publishes it as that release, with tools/release-notes/vX.Y.Z.md.
