@@ -1,3 +1,4 @@
+# Uncharted PC Port submodules: audio decoder, GUI framework, shader compiler, and x86 emitter
 [submodule "gow3_pc/gpu/third_party/fsr-vulkan"]
 	path = gow3_pc/gpu/third_party/fsr-vulkan
 	url = https://github.com/FireBurn/FSR-Vulkan.git
