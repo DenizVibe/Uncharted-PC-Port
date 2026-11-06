@@ -1,8 +1,20 @@
 # Changelog
 
-Uncharted: The Nathan Drake Collection PC port, by **BilalReloaded**
-([YouTube](https://www.youtube.com/@BilalReloaded/videos), [GitHub](https://github.com/bc160201983)).
+Uncharted: The Nathan Drake Collection PC port, by **Deniz**
+([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)).
 Technical details of every item: [analysis/STATUS.md](analysis/STATUS.md).
+
+## 6 November 2026 (0.8.2)
+
+- **Redesigned Launcher UI & Experience**:
+  - Full launcher layout cleanup with modern native dark styling and warm gold accents, eliminating visual clutter.
+  - **Dedicated Presets Tab:** Quality presets now live cleanly in their own dedicated `Presets` sidebar tab with an adjustment sliders vector icon, separating configuration from the launch hub.
+  - **Refined Game Cards:** Clean widescreen selection cards (`01 Drake's Fortune`, `02 Among Thieves`, `03 Drake's Deception`) with subtle gold accents on selection and hover, displaying per-game preset and resolution indicators.
+  - **Removed Texture & Badge Clutter:** Removed old cover textures and redundant "ACTIVE" badges for a cleaner look.
+  - **Canvas Vector Icons:** Replaced text emojis with crisp custom canvas vector icons across the sidebar that dynamically highlight on hover and tab selection.
+  - **Window Geometry & Proportions:** Set default launcher size to `1240 × 760` centered on display with a clamped `1120 × 680` minimum size to eliminate clipping.
+  - **Layout & Alignment Fixes:** Fixed sidebar text margin bug by standardizing a clean 28px margin across all settings tabs (Display, Performance, Controls, Cheats, Advanced, Log, Presets), perfectly aligning with subheader and footer text guides.
+  - **Author Rebranding & Repository Links:** Rebranded launcher title bar, headers, and app identifier to Deniz, pointing repository links directly to `DenizVibe/Uncharted-PC-Port`.
 
 ## 1 November 2026, night (0.8.1)
 

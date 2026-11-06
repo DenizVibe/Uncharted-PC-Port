@@ -5,8 +5,7 @@ Thieves* and *Drake's Deception*) natively on Windows. The game's own x86-64 cod
 on the PC; a runtime supplies the PS4 system libraries, and a Vulkan renderer executes the PS4 GPU
 work.
 
-By **BilalReloaded** ([YouTube](https://www.youtube.com/@BilalReloaded/videos),
-[GitHub](https://github.com/bc160201983)), October 2026. What changed and when:
+By **Deniz** ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)), November 2026. What changed and when:
 [CHANGELOG.md](CHANGELOG.md).
 
 > **No game files are in this repository or its builds.** You need your own copy of the game
@@ -44,15 +43,17 @@ plan and test list: [analysis/PLAN.md](analysis/PLAN.md).
 ## Features
 
 **Launcher** (`Uncharted Launcher.exe`)
-- A card per game; settings are kept **per game**.
-- Quality presets:
+- Clean library hub with responsive widescreen cards for each game; settings are kept **per game**.
+- Modern dark interface with warm gold accents and crisp canvas vector icons.
+- **Dedicated Presets Tab:** Graphics quality presets live in their own tab with adjustment controls:
 
   | Preset | Resolution | Frame rate | For |
   |---|---|---|---|
-  | Low | 1080p, FSR 1 Performance (draws 960x540) | 60 | weak GPUs |
-  | Medium | 1080p (as on PS4) | 60 | most PCs |
-  | High | 1440p | 60 | fast GPUs |
-  | Ultra | 4K (Drake's Fortune draws 1620p, upscaled) | up to 120 (experimental) | very fast GPUs |
+  | IGPU | 540-720p, FSR 1 Ultra Performance | 30-60 | Intel / AMD integrated graphics |
+  | Low | 1080p, FSR 1 Performance (draws 960x540) | 60 | Older / budget GPUs |
+  | Medium | 1080p Native (as on PS4) | 60 | Most PCs (PS4 fidelity) |
+  | High | 1440p (2K) | 60 | Mid-to-high end GPUs |
+  | Ultra | 4K (Drake's Fortune draws 1620p, upscaled) | up to 120 (experimental) | Very fast GPUs |
 
   Every preset queues 1 frame. 2 frames queued is faster in heavy scenes, but GPU results
   reach the game a frame later: keep it at 1.
@@ -88,7 +89,7 @@ plan and test list: [analysis/PLAN.md](analysis/PLAN.md).
   from the start in all three games; saves are untouched.
 - **Game update 1.02** is used automatically when it sits next to the game folder (see below).
 - Log and save folders, desktop shortcut, shader cache reset, game folder selection, links to the
-  author's [YouTube](https://www.youtube.com/@BilalReloaded/videos) and GitHub.
+  author's [GitHub](https://github.com/DenizVibe/Uncharted-PC-Port).
 
 **In game:** `Insert` or `LT + R3` opens the menu (display, anti-aliasing, draw distance, frame rate,
 overlay, controls). Both shortcuts can be changed in its Controls tab (any key; any one or two
@@ -192,9 +193,8 @@ tag `v0.1.1`; GitHub Actions then builds the package and publishes the release w
 
 ## Credits and license
 
-- **Uncharted port, launcher and game fixes: BilalReloaded**
-  ([YouTube](https://www.youtube.com/@BilalReloaded/videos),
-  [GitHub](https://github.com/bc160201983)), 2026. The fixes and their dates are listed in
+- **Uncharted port, launcher and game fixes: Deniz**
+  ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)), 2026. The fixes and their dates are listed in
   [CHANGELOG.md](CHANGELOG.md); the commit history shows each change.
 - The runtime started from the [gow3_pc](https://github.com/FelipePrado0/gow3_pc) project
   (whose internal names, such as `GOW3_*` settings, it keeps) and the
@@ -218,5 +218,5 @@ tag `v0.1.1`; GitHub Actions then builds the package and publishes the release w
 You are welcome to use these fixes in your own port. The GPL asks that you keep the copyright and
 license notices and publish your source code under the same license when you distribute your
 build. Beyond that, a request: **credit this project and link back to it**
-(`https://github.com/bc160201983/Uncharted-The-Nathan-Drake-Collection-PC-port`, by BilalReloaded) in your README or release
+(`https://github.com/DenizVibe/Uncharted-PC-Port`, by Deniz) in your README or release
 notes, so people can find where a fix came from.

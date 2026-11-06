@@ -199,11 +199,14 @@ def net_games():
 
 
 GAMES = [
-    {"key": "u1", "number": "1", "title": "DRAKE'S FORTUNE", "name": "Uncharted: Drake's Fortune", "subtitle": "Uncharted 1  •  double-click to play",
+    {"key": "u1", "number": "1", "title": "DRAKE'S FORTUNE", "name": "Uncharted: Drake's Fortune",
+     "year": "2007", "tagline": "UNCHARTED 1 • 2007", "subtitle": "Uncharted 1  •  double-click to play",
      "exe": "eboot.bin", "log": "uncharted"},
-    {"key": "u2", "number": "2", "title": "AMONG THIEVES", "name": "Uncharted 2: Among Thieves", "subtitle": "Uncharted 2  •  double-click to play",
+    {"key": "u2", "number": "2", "title": "AMONG THIEVES", "name": "Uncharted 2: Among Thieves",
+     "year": "2009", "tagline": "UNCHARTED 2 • 2009", "subtitle": "Uncharted 2  •  double-click to play",
      "exe": "big2-ps4_Shipping.elf", "log": "big2-ps4_Shipping"},
-    {"key": "u3", "number": "3", "title": "DRAKE'S DECEPTION", "name": "Uncharted 3: Drake's Deception", "subtitle": "Uncharted 3  •  double-click to play",
+    {"key": "u3", "number": "3", "title": "DRAKE'S DECEPTION", "name": "Uncharted 3: Drake's Deception",
+     "year": "2011", "tagline": "UNCHARTED 3 • 2011", "subtitle": "Uncharted 3  •  double-click to play",
      "exe": "big3-ps4_Shipping.elf", "log": "big3-ps4_Shipping"},
 ]
 
@@ -942,43 +945,37 @@ def resolution_options(aspect):
 # render resolution is new (October 2026): confirm in play. All three games draw at 4K
 # natively except Drake's Fortune, which stops at 1620p (its memory layout) and upscales.
 PRESETS = {
-    # IGPU card adapted from PR #223 by memeguyoffical (the card, its values and the iGPU detection).
     "igpu": {
-        "title": "IGPU", "summary": "30–60 FPS  •  540–720p, FSR 1",
-        "detail": "Intel and AMD integrated graphics: the game draws at 540p (720p on the strongest "
-                  "iGPUs, 360p on the weakest) and FSR 1 upscales it to 1080p. About 30 FPS on Vega "
-                  "and 2-CU Radeon, 60 on Radeon 680M/760M/780M and Iris Xe. No anti-aliasing; the "
-                  "lowest memory use.",
+        "title": "IGPU", "summary": "30–60 FPS  •  720p FSR",
+        "detail": "For integrated graphics (Iris Xe, Radeon 600M/700M/Vega). Lowest memory use.",
         "resolution": "1920x1080", "upscale": "performance",
         "values": {"fps_limit": "60", "frames_queued": "1", "vsync": "1", "async_shaders": "1",
                    "fsr1": "1", "rcas": "1", "rcas_strength": "75", "upscaler": "off"},
     },
     "low": {
-        "title": "LOW", "summary": "60 FPS  •  1080p, FSR 1",
-        "detail": "For older graphics cards: the game draws at half of 1080p and FSR 1 upscales it; "
-                  "the HUD stays sharp.",
+        "title": "LOW", "summary": "60 FPS  •  1080p FSR",
+        "detail": "For older or budget GPUs. FSR scaling with sharp HUD.",
         "resolution": "1920x1080", "upscale": "performance",
         "values": {"fps_limit": "60", "frames_queued": "1", "vsync": "1", "async_shaders": "1",
                    "fsr1": "1", "rcas": "1", "rcas_strength": "75"},
     },
     "medium": {
-        "title": "MEDIUM", "summary": "60 FPS  •  as on PS4",
-        "detail": "Like the PS4: 1080p at 60 FPS. Right for most PCs.",
+        "title": "MEDIUM", "summary": "60 FPS  •  1080p Native",
+        "detail": "Original PS4 fidelity. Recommended for most PCs.",
         "resolution": "1920x1080", "upscale": "off",
         "values": {"fps_limit": "60", "frames_queued": "1", "vsync": "1", "async_shaders": "1",
                    "fsr1": "0", "rcas": "1", "rcas_strength": "75"},
     },
     "high": {
-        "title": "HIGH", "summary": "60 FPS  •  1440p",
-        "detail": "Sharper: the game draws at 1440p.",
+        "title": "HIGH", "summary": "60 FPS  •  1440p (2K)",
+        "detail": "Crisp 1440p presentation for mid-to-high end GPUs.",
         "resolution": "2560x1440", "upscale": "off",
         "values": {"fps_limit": "60", "frames_queued": "1", "vsync": "1", "async_shaders": "1",
                    "fsr1": "0", "rcas": "1", "rcas_strength": "50"},
     },
     "ultra": {
-        "title": "ULTRA", "summary": "4K  •  up to 120 FPS",
-        "detail": "For fast graphics cards: native 4K and up to 120 FPS (experimental). Drake's "
-                  "Fortune draws at 1620p and scales up.",
+        "title": "ULTRA", "summary": "Up to 120 FPS  •  4K",
+        "detail": "Max fidelity 4K with high refresh rate for powerful GPUs.",
         "resolution": "3840x2160", "upscale": "off",
         "values": {"fps_limit": str(MAX_FPS), "frames_queued": "1", "vsync": "1", "async_shaders": "1",
                    "fsr1": "0", "rcas": "1", "rcas_strength": "50"},
@@ -1541,6 +1538,21 @@ class ScrollBar(tk.Canvas):
         self.draw()
 
 
+def format_playtime(seconds):
+    """Formats cumulative gameplay seconds into a human-readable label."""
+    if not seconds or seconds < 60:
+        return "Not played yet"
+    minutes = int(seconds // 60)
+    hours = minutes // 60
+    rem_min = minutes % 60
+    if hours == 0:
+        return f"{rem_min}m played"
+    elif rem_min == 0:
+        return f"{hours}h played"
+    else:
+        return f"{hours}h {rem_min}m played"
+
+
 class Launcher:
     def __init__(self, root, direct=None):
         self.root = root
@@ -1565,10 +1577,13 @@ class Launcher:
         self.gpu_name = self.config.get("gpu")
         self.recommended = gpu_recommendation(self.gpu_name)
         self.fonts()
-        root.title(f"{APP_TITLE} - Launcher by BilalReloaded")
+        root.title(f"{APP_TITLE} - Launcher by Deniz")
         root.configure(bg=BG)
         root.resizable(True, True)
-        self.width = self.px(1180)
+        self.width = self.px(1240)
+        self.height = self.px(760)
+        root.geometry(f"{self.width}x{self.height}")
+        root.minsize(self.px(1120), self.px(680))
         try:
             root.iconbitmap(default=str(ASSETS / "uncharted.ico"))
         except tk.TclError:
@@ -1576,7 +1591,6 @@ class Launcher:
         self.build()
         root.update_idletasks()
         dark_title_bar(root)
-        root.minsize(root.winfo_reqwidth(), root.winfo_reqheight())
         self.fit_to_screen()
         self.restore_window_position()
         write_config(self.config)  # keeps one-time updates (read_config) even without a change
@@ -1598,6 +1612,7 @@ class Launcher:
 
     def restore_window_position(self):
         """The window opens where it was last closed, if that spot is still on a screen."""
+        self.root.geometry(f"{self.width}x{self.height}")
         position = self.config.get("window_xy")
         if not (isinstance(position, list) and len(position) == 2):
             return
@@ -1605,9 +1620,8 @@ class Launcher:
         self.root.update_idletasks()
         screen_w, screen_h = self.root.winfo_vrootwidth(), self.root.winfo_vrootheight()
         if -50 <= x <= max(0, screen_w - 200) and 0 <= y <= max(0, screen_h - 200):
-            # All of the window on the screen (fit_to_screen may have made it taller than it was).
-            y = min(y, max(0, self.root.winfo_screenheight() - self.root.winfo_reqheight() - self.px(70)))
-            self.root.geometry(f"+{x}+{y}")
+            y = min(y, max(0, self.root.winfo_screenheight() - self.height - self.px(70)))
+            self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
     def fit_to_screen(self):
         """More room for the settings when the screen is tall enough (fewer pages need to scroll)."""
@@ -1645,170 +1659,392 @@ class Launcher:
         return int(value * self.s)
 
     def fonts(self):
-        self.f_title = ("Georgia", 40, "bold")
-        self.f_subtitle = ("Segoe UI Semibold", 11)
-        self.f_card_number = ("Georgia", 30, "bold")
-        self.f_card_title = ("Georgia", 14, "bold")
+        self.f_title = ("Georgia", 32, "bold")
+        self.f_subtitle = ("Segoe UI Semibold", 10)
+        self.f_card_number = ("Georgia", 26, "bold")
+        self.f_card_title = ("Georgia", 13, "bold")
         self.f_body = ("Segoe UI", 10)
         self.f_body_bold = ("Segoe UI Semibold", 10)
         self.f_small = ("Segoe UI", 9)
         self.f_tab = ("Segoe UI Semibold", 10)
         self.f_caps = ("Segoe UI Semibold", 8)
-        self.f_play = ("Georgia", 17, "bold")
+        self.f_play = ("Georgia", 14, "bold")
 
     # -- layout -----------------------------------------------------------------------------
 
     def build(self):
-        self.build_hero()
-        self.build_cards()
-        self.build_footer()
-        self.build_tabs()
+        # Two-column layout: full-height sidebar on the left, main pane on the right
+        self.container = tk.Frame(self.root, bg=BG)
+        self.container.pack(fill="both", expand=True)
+
+        self.build_sidebar()
+        self.build_main_pane()
+
         self.select_game(self.config.get("game", "u1"), save=False)
-        self.show_tab(self.config.get("tab", "setup") if self.config.get("tab") in self.pages else "setup",
-                      save=False)
+        start_tab = self.config.get("tab", "play")
+        if start_tab == "setup":
+            start_tab = "game"
+        if start_tab not in self.pages:
+            start_tab = "play"
+        self.show_tab(start_tab, save=False)
 
-    def build_hero(self):
-        w, h = self.width, self.px(170)
-        art = None
-        for name in ("pic1.png", "pic0.png"):
-            if (self.game_dir() / "sce_sys" / name).exists():
-                art = Image.open(self.game_dir() / "sce_sys" / name).convert("RGB")
-                break
-        if art is None:
-            art = Image.new("RGB", (1920, 1080), "#d9c9a6")
-        # Fill the width; keep Drake (right) and the top of the parchment in view.
-        scale = w / art.width
-        art = art.resize((w, int(art.height * scale)), Image.LANCZOS)
-        top = int(art.height * 0.02)
-        art = art.crop((0, top, w, top + h))
-        # Fade into the dark panel below.
-        fade = Image.new("L", (w, h), 0)
-        draw = ImageDraw.Draw(fade)
-        start = int(h * 0.62)
-        for y in range(start, h):
-            draw.line([(0, y), (w, y)], fill=int(255 * ((y - start) / (h - start)) ** 1.6))
-        dark = Image.new("RGB", (w, h), BG)
-        art = Image.composite(dark, art, fade)
-        photo = ImageTk.PhotoImage(art)
-        self.images.append(photo)
-        canvas = tk.Canvas(self.root, width=w, height=h, bg=BG, highlightthickness=0)
-        canvas.pack(side="top")
-        canvas.create_image(0, 0, image=photo, anchor="nw")
-        x, y = self.px(48), self.px(52)
-        canvas.create_text(x, y, text="UNCHARTED", font=self.f_title, fill="#3b2914", anchor="w")
-        canvas.create_text(x + self.px(3), y + self.px(44), text="T H E   N A T H A N   D R A K E   C O L L E C T I O N",
-                           font=self.f_subtitle, fill="#8a6326", anchor="w")
-        canvas.create_line(x + self.px(3), y + self.px(66), x + self.px(330), y + self.px(66), fill="#b98d45", width=2)
-        self.draw_links(canvas, w)
+    def build_sidebar(self):
+        w = self.px(220)
+        self.sidebar = tk.Frame(self.container, bg="#110d0a", width=w, highlightthickness=1, highlightbackground="#221a14")
+        self.sidebar.pack(side="left", fill="y")
+        self.sidebar.pack_propagate(False)
 
-    def draw_links(self, canvas, width):
-        """The author's Patreon, YouTube channel and GitHub as badges in the top right of the hero."""
-        right, top, height = width - self.px(22), self.px(18), self.px(30)
-        for label, url, color, hover in reversed(LINKS):
-            tag = f"link-{label}"
-            text = canvas.create_text(0, 0, text=label, font=self.f_body_bold, fill="white", anchor="w", tags=tag)
-            x1, _, x2, _ = canvas.bbox(text)
-            badge_w = (x2 - x1) + self.px(46)
-            left = right - badge_w
-            mid = top + height // 2
-            canvas.coords(text, left + self.px(34), mid)
-            badge = round_rect(canvas, left, top, right, top + height, height // 2, fill=color, outline=color, tags=tag)
-            canvas.tag_lower(badge, text)
-            # Icon: YouTube's play triangle on white, a heart for Patreon, GitHub's code brackets.
-            icon_x = left + self.px(12)
-            if label == "Patreon":
-                canvas.create_text(icon_x + self.px(8), mid, text="♥", font=self.f_body_bold, fill="white",
-                                   tags=tag)
-            elif label == "YouTube":
-                round_rect(canvas, icon_x, mid - self.px(7), icon_x + self.px(16), mid + self.px(7), self.px(4),
-                           fill="white", outline="white", tags=tag)
-                canvas.create_polygon(icon_x + self.px(6), mid - self.px(4), icon_x + self.px(6), mid + self.px(4),
-                                      icon_x + self.px(12), mid, fill=color, outline=color, tags=tag)
-            else:
-                canvas.create_text(icon_x + self.px(8), mid, text="</>", font=self.f_small, fill="white", tags=tag)
-            canvas.tag_bind(tag, "<Button-1>", lambda e, u=url: webbrowser.open(u))
-            canvas.tag_bind(tag, "<Enter>", lambda e, b=badge, c=hover: (canvas.itemconfig(b, fill=c, outline=c),
-                                                                       canvas.config(cursor="hand2")))
-            canvas.tag_bind(tag, "<Leave>", lambda e, b=badge, c=color: (canvas.itemconfig(b, fill=c, outline=c),
-                                                                       canvas.config(cursor="")))
-            right = left - self.px(10)
+        # Header branding
+        hdr = tk.Frame(self.sidebar, bg="#110d0a")
+        hdr.pack(side="top", fill="x", padx=self.px(16), pady=(self.px(22), self.px(10)))
 
-    def build_cards(self):
-        frame = tk.Frame(self.root, bg=BG)
-        frame.pack(side="top", fill="x", padx=self.px(40), pady=(0, self.px(12)))
+        tk.Label(hdr, text="UNCHARTED", font=("Georgia", 18, "bold"), bg="#110d0a", fg=GOLD, anchor="w").pack(side="top", fill="x")
+        tk.Label(hdr, text="NATHAN DRAKE COLLECTION", font=("Segoe UI Semibold", 8), bg="#110d0a", fg=MUTED, anchor="w").pack(side="top", fill="x", pady=(self.px(2), 0))
+        tk.Label(hdr, text="by Deniz", font=self.f_small, bg="#110d0a", fg="#7a6b5a", anchor="w").pack(side="top", fill="x", pady=(self.px(4), 0))
+        tk.Label(hdr, text="version 1.02", font=("Segoe UI", 8), bg="#110d0a", fg="#5c4f42", anchor="w").pack(side="top", fill="x", pady=(self.px(1), 0))
+
+        # Thin separator
+        tk.Frame(self.sidebar, bg="#221a14", height=1).pack(side="top", fill="x", padx=self.px(14), pady=(self.px(10), self.px(12)))
+
+        # Sidebar navigation items with custom crisp vector icons
+        self.tab_buttons = {}
+        self.tab_cells = {}
+        tabs = [
+            ("play", "Play"),
+            ("presets", "Presets"),
+            ("display", "Display"),
+            ("performance", "Performance"),
+            ("controls", "Controls"),
+            ("cheats", "Cheats"),
+            ("advanced", "Advanced"),
+            ("log", "Log"),
+        ]
+        if multiplayer_preview():
+            tabs.append(("multiplayer", "Multiplayer"))
+
+        for name, label in tabs:
+            cell = tk.Frame(self.sidebar, bg="#110d0a", cursor="hand2")
+            cell.pack(side="top", fill="x", padx=self.px(10), pady=self.px(2))
+            bar = tk.Frame(cell, bg="#110d0a", width=max(3, self.px(3)))
+            bar.pack(side="left", fill="y")
+            icon_canvas = tk.Canvas(cell, width=self.px(22), height=self.px(22), bg="#110d0a",
+                                    highlightthickness=0, cursor="hand2")
+            icon_canvas.pack(side="left", padx=(self.px(8), self.px(6)))
+            text = tk.Label(cell, text=label, font=self.f_tab, bg="#110d0a", fg=MUTED, anchor="w", cursor="hand2")
+            text.pack(side="left", fill="x", expand=True, padx=(0, self.px(8)), pady=self.px(8))
+
+            self.draw_sidebar_icon(name, icon_canvas, MUTED)
+
+            for widget in (cell, icon_canvas, text):
+                widget.bind("<Button-1>", lambda e, n=name: self.show_tab(n))
+                widget.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
+                widget.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
+
+            self.tab_buttons[name] = (cell, bar, icon_canvas, text)
+            self.tab_cells[name] = cell
+
+        # Sidebar footer note
+        sb_ftr = tk.Frame(self.sidebar, bg="#110d0a")
+        sb_ftr.pack(side="bottom", fill="x", padx=self.px(16), pady=self.px(16))
+        tk.Label(sb_ftr, text="Native port: the original PS4 game code runs directly on Windows.",
+                 font=("Segoe UI", 8), bg="#110d0a", fg="#635443", justify="left",
+                 wraplength=self.px(180)).pack(side="bottom", fill="x")
+
+    def build_main_pane(self):
+        self.main_pane = tk.Frame(self.container, bg=BG)
+        self.main_pane.pack(side="left", fill="both", expand=True)
+
+        # Subheader bar
+        self.sub_header = tk.Frame(self.main_pane, bg="#14100c", height=self.px(44))
+        self.sub_header.pack(side="top", fill="x")
+        self.sub_header.pack_propagate(False)
+
+        sub_inner = tk.Frame(self.sub_header, bg="#14100c")
+        sub_inner.pack(fill="both", expand=True, padx=self.px(28))
+
+        hint_lbl = tk.Label(sub_inner, text="UNCHARTED PC PORT  •  NATIVE 64-BIT", font=("Segoe UI Semibold", 8),
+                            bg="#14100c", fg=GOLD, anchor="w")
+        hint_lbl.pack(side="left", fill="y")
+
+        self.breadcrumb_lbl = tk.Label(sub_inner, text="", font=("Georgia", 11, "bold"),
+                                       bg="#14100c", fg=TEXT, anchor="e")
+        self.breadcrumb_lbl.pack(side="right", fill="y")
+
+        tk.Frame(self.main_pane, bg=LINE, height=1).pack(side="top", fill="x")
+
+        # Bottom footer bar
+        self.build_footer()
+
+        # Main scrollable/switchable body frame
+        self.body = tk.Frame(self.main_pane, bg=BG)
+        self.body.pack(side="top", fill="both", expand=True)
+
+        # Build pages
+        self.scroll_canvases = set()
+        self.root.bind_all("<MouseWheel>", self.wheel)
+        self.pages = {
+            "play": self.page_library(),
+            "presets": self.page_presets(),
+            "display": self.page_display(),
+            "performance": self.page_performance(),
+            "controls": self.page_controls(),
+            "cheats": self.page_cheats(),
+            "advanced": self.page_advanced(),
+            "log": self.page_log(),
+        }
+        if multiplayer_preview():
+            self.pages["multiplayer"] = self.page_multiplayer()
+
+    def page_library(self):
+        page = tk.Frame(self.body, bg=BG)
+
+        # Header
+        top_row = tk.Frame(page, bg=BG)
+        top_row.pack(side="top", fill="x", padx=self.px(28), pady=(self.px(22), self.px(16)))
+
+        tk.Label(top_row, text="Library", font=("Georgia", 16, "bold"), bg=BG, fg=TEXT, anchor="w").pack(side="left")
+        tk.Label(top_row, text="Double-click to launch", font=self.f_small, bg=BG, fg=MUTED, anchor="e").pack(side="right", pady=(self.px(3), 0))
+
+        # 3 Clean Game Cards
+        cards_frame = tk.Frame(page, bg=BG)
+        cards_frame.pack(side="top", fill="x", padx=self.px(28), pady=(0, self.px(20)))
+
         self.cards = {}
+        columns = 3
         gap = self.px(16)
-        card_w = (self.width - 2 * self.px(40) - 2 * gap) // 3
-        card_h = self.px(80)
+        avail = self.width - self.px(220) - self.px(28) * 2
+        card_w = (avail - (columns - 1) * gap) // columns
+        card_h = self.px(98)
+
         for i, game in enumerate(GAMES):
-            canvas = tk.Canvas(frame, width=card_w, height=card_h, bg=BG, highlightthickness=0, cursor="hand2")
-            canvas.grid(row=0, column=i, padx=(0 if i == 0 else gap, 0))
+            cards_frame.columnconfigure(i, weight=1)
+            canvas = tk.Canvas(cards_frame, width=card_w, height=card_h, bg=BG, highlightthickness=0, cursor="hand2")
+            canvas.grid(row=0, column=i, padx=(0 if i == 0 else gap, 0), sticky="ew")
             canvas.bind("<Button-1>", lambda e, k=game["key"]: self.select_game(k))
             canvas.bind("<Double-Button-1>", lambda e, k=game["key"]: self.play_game(k))
             canvas.bind("<Enter>", lambda e, k=game["key"]: self.draw_card(k, hover=True))
             canvas.bind("<Leave>", lambda e, k=game["key"]: self.draw_card(k))
             self.cards[game["key"]] = (canvas, game, card_w, card_h)
 
+        # Quick Actions Row
+        actions_row = tk.Frame(page, bg=BG)
+        actions_row.pack(side="top", fill="x", padx=self.px(28), pady=(0, self.px(18)))
+
+        fs_frame = tk.Frame(actions_row, bg=BG)
+        fs_frame.pack(side="left", padx=(0, self.px(20)))
+        is_fs = self.ini.get("display_mode") == "fullscreen"
+        self.library_fs_toggle = Toggle(fs_frame, self.s, is_fs, self.toggle_library_fullscreen)
+        self.library_fs_toggle.pack(side="left", padx=(0, self.px(8)))
+        tk.Label(fs_frame, text="Fullscreen", font=self.f_body_bold, bg=BG, fg=TEXT).pack(side="left")
+
+        btn_steam = tk.Label(actions_row, text="Add to Steam", font=self.f_small, bg=PANEL, fg=TEXT,
+                             padx=self.px(14), pady=self.px(6), cursor="hand2",
+                             highlightthickness=1, highlightbackground=LINE)
+        btn_steam.pack(side="right", padx=(self.px(10), 0))
+        btn_steam.bind("<Button-1>", lambda e: self.add_to_steam(per_game=False))
+        btn_steam.bind("<Enter>", lambda e, b=btn_steam: b.config(bg=PANEL_HI, highlightbackground=GOLD, fg=GOLD))
+        btn_steam.bind("<Leave>", lambda e, b=btn_steam: b.config(bg=PANEL, highlightbackground=LINE, fg=TEXT))
+
+        btn_sc = tk.Label(actions_row, text="Desktop shortcut", font=self.f_small, bg=PANEL, fg=TEXT,
+                          padx=self.px(14), pady=self.px(6), cursor="hand2",
+                          highlightthickness=1, highlightbackground=LINE)
+        btn_sc.pack(side="right")
+        btn_sc.bind("<Button-1>", lambda e: self.desktop_shortcut())
+        btn_sc.bind("<Enter>", lambda e, b=btn_sc: b.config(bg=PANEL_HI, highlightbackground=GOLD, fg=GOLD))
+        btn_sc.bind("<Leave>", lambda e, b=btn_sc: b.config(bg=PANEL, highlightbackground=LINE, fg=TEXT))
+
+        # Game Path Bar
+        path_box = tk.Frame(page, bg=PANEL, highlightthickness=1, highlightbackground=LINE)
+        path_box.pack(side="top", fill="x", padx=self.px(28), pady=(0, self.px(12)))
+
+        pb_inner = tk.Frame(path_box, bg=PANEL)
+        pb_inner.pack(fill="x", padx=self.px(16), pady=self.px(10))
+
+        pb_left = tk.Frame(pb_inner, bg=PANEL)
+        pb_left.pack(side="left", fill="x", expand=True)
+
+        self.game_dir_label = tk.Label(pb_left, text=f"Game Files: {self.game_dir()}", font=self.f_small, bg=PANEL, fg=TEXT, anchor="w")
+        self.game_dir_label.pack(side="top", fill="x")
+
+        self.update_label = tk.Label(pb_left, text=self.update_text(), font=self.f_small, bg=PANEL, fg=MUTED, anchor="w")
+        self.update_label.pack(side="top", fill="x", pady=(self.px(2), 0))
+
+        pb_right = tk.Frame(pb_inner, bg=PANEL)
+        pb_right.pack(side="right")
+
+        btn_browse = tk.Label(pb_right, text="Browse...", font=self.f_small, bg=PANEL_HI, fg=TEXT,
+                              padx=self.px(12), pady=self.px(5), cursor="hand2",
+                              highlightthickness=1, highlightbackground=LINE)
+        btn_browse.pack(side="left", padx=(0, self.px(8)))
+        btn_browse.bind("<Button-1>", lambda e: self.choose_game_dir())
+        btn_browse.bind("<Enter>", lambda e, b=btn_browse: b.config(bg="#2d241c", highlightbackground=GOLD, fg=GOLD))
+        btn_browse.bind("<Leave>", lambda e, b=btn_browse: b.config(bg=PANEL_HI, highlightbackground=LINE, fg=TEXT))
+
+        btn_update = tk.Label(pb_right, text="Update 1.02...", font=self.f_small, bg=PANEL_HI, fg=TEXT,
+                              padx=self.px(12), pady=self.px(5), cursor="hand2",
+                              highlightthickness=1, highlightbackground=LINE)
+        btn_update.pack(side="left")
+        btn_update.bind("<Button-1>", lambda e: self.choose_update_folder())
+        btn_update.bind("<Enter>", lambda e, b=btn_update: b.config(bg="#2d241c", highlightbackground=GOLD, fg=GOLD))
+        btn_update.bind("<Leave>", lambda e, b=btn_update: b.config(bg=PANEL_HI, highlightbackground=LINE, fg=TEXT))
+
+        return page
+
+    def page_presets(self):
+        page = self.page(scroll=True)
+
+        sec_presets = tk.Label(page, text="Graphics Quality Presets", font=self.f_card_title, bg=BG, fg=GOLD, anchor="w")
+        sec_presets.pack(side="top", fill="x", pady=(0, self.px(4)))
+
+        self.setup_intro = tk.Label(page, text="", font=self.f_body, bg=BG, fg=MUTED, anchor="w")
+        self.setup_intro.pack(side="top", fill="x", pady=(0, self.px(10)))
+
+        grid = tk.Frame(page, bg=BG)
+        grid.pack(side="top", fill="x")
+        self.preset_cards = {}
+        p_gap = self.px(14)
+        p_cols = 3
+        avail_w = self.width - self.px(220) - self.px(28) - self.px(20) - self.px(16)
+        p_w = (avail_w - (p_cols - 1) * p_gap) // p_cols
+        p_h = self.px(130)
+        for i, name in enumerate(PRESET_ORDER):
+            row, column = divmod(i, p_cols)
+            canvas = tk.Canvas(grid, width=p_w, height=p_h, bg=BG, highlightthickness=0, cursor="hand2")
+            canvas.grid(row=row, column=column, padx=(0 if column == 0 else p_gap, 0),
+                        pady=(0 if row == 0 else p_gap, 0), sticky="w")
+            canvas.bind("<Button-1>", lambda e, n=name: self.apply_preset(n))
+            canvas.bind("<Enter>", lambda e, n=name: self.draw_preset(n, hover=True))
+            canvas.bind("<Leave>", lambda e, n=name: self.draw_preset(n))
+            self.preset_cards[name] = (canvas, p_w, p_h)
+
+        self.custom_note = tk.Label(page, text="", font=self.f_small, bg=BG, fg=MUTED, anchor="w")
+        self.custom_note.pack(side="top", fill="x", pady=(self.px(12), 0))
+        self.root.after_idle(self.redraw_presets)
+        return page
+
+    def toggle_library_fullscreen(self, enabled):
+        mode = "fullscreen" if enabled else "windowed"
+        self.change("display_mode", mode)
+        if "display_mode" in self.widgets and hasattr(self.widgets["display_mode"], "set"):
+            self.widgets["display_mode"].set(mode)
+
     def draw_card(self, key, hover=False):
+        if key not in getattr(self, "cards", {}):
+            return
         canvas, game, w, h = self.cards[key]
         selected = key == self.config.get("game")
         canvas.delete("all")
-        fill = PANEL_HI if selected or hover else PANEL
-        outline = GOLD if selected else ("#4e3d2c" if hover else LINE)
-        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(10), fill=fill, outline=outline, width=2 if selected else 1)
 
-        # Number badge container
-        num_box_w = self.px(36)
-        num_box_h = self.px(36)
-        nb_x1 = self.px(14)
-        nb_y1 = h // 2 - num_box_h // 2
-        nb_x2 = nb_x1 + num_box_w
-        nb_y2 = nb_y1 + num_box_h
-        round_rect(canvas, nb_x1, nb_y1, nb_x2, nb_y2, self.px(6),
-                   fill="#292017" if selected else "#1a1510",
-                   outline=GOLD if selected else LINE, width=1)
-        canvas.create_text((nb_x1 + nb_x2) // 2, (nb_y1 + nb_y2) // 2, text=game["number"], font=self.f_card_number,
-                           fill=GOLD if selected else DIM, anchor="center")
+        fill = "#1c1611" if selected else ("#18130e" if hover else "#130f0c")
+        outline = GOLD if selected else ("#4a3726" if hover else "#241c14")
+        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if selected else 1)
 
-        # Titles and profile details
-        canvas.create_text(self.px(58), h // 2 - self.px(12), text=game["title"], font=self.f_card_title,
-                           fill=TEXT, anchor="w")
+        # Left Number badge (01, 02, 03)
+        box_w = self.px(42)
+        box_h = self.px(42)
+        bx1 = self.px(16)
+        by1 = (h - box_h) // 2
+        bx2 = bx1 + box_w
+        by2 = by1 + box_h
+        round_rect(canvas, bx1, by1, bx2, by2, self.px(6),
+                   fill="#292017" if selected else "#1a140f",
+                   outline=GOLD if selected else "#35271a", width=1)
+        num_str = f"0{game['number']}"
+        canvas.create_text((bx1 + bx2) // 2, (by1 + by2) // 2, text=num_str, font=("Georgia", 14, "bold"),
+                           fill=GOLD if selected else MUTED, anchor="center")
 
-        # Dynamic profile status
+        tx = self.px(72)
+        # Line 1: Title
+        canvas.create_text(tx, self.px(30), text=game["title"], font=self.f_card_title,
+                           fill=GOLD if selected else TEXT, anchor="w")
+
+        # Line 2: Subtitle
+        canvas.create_text(tx, self.px(54), text=game.get("tagline", f"UNCHARTED {game['number']}"),
+                           font=("Segoe UI Semibold", 8), fill=MUTED, anchor="w")
+
+        # Line 3: Setting indicator
         settings = self.config.get("games", {}).get(key, {})
         preset = str(settings.get("preset", "Medium")).capitalize()
         res = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p"))).upper()
-        detail_text = f"Uncharted {game['number']}   •   {preset} ({res})"
-        canvas.create_text(self.px(59), h // 2 + self.px(13), text=detail_text, font=self.f_small,
-                           fill=GOLD if selected else MUTED, anchor="w")
+        canvas.create_text(tx, self.px(74), text=f"{preset} Preset  •  {res}",
+                           font=self.f_small, fill=GOLD if selected else DIM, anchor="w")
 
-        if selected:
-            # Active status badge
-            pill_w = self.px(60)
-            pill_h = self.px(18)
-            px2 = w - self.px(14)
-            px1 = px2 - pill_w
-            py1 = self.px(12)
-            py2 = py1 + pill_h
-            round_rect(canvas, px1, py1, px2, py2, self.px(4), fill="#2e2316", outline=GOLD, width=1)
-            canvas.create_text((px1 + px2) // 2, (py1 + py2) // 2, text="ACTIVE", font=self.f_caps,
-                               fill=GOLD, anchor="center")
+    def page_log(self):
+        page = self.page(scroll=False)
+        bar = tk.Frame(page, bg=BG)
+        bar.pack(side="top", fill="x", pady=(0, self.px(8)))
+
+        tk.Label(bar, text="Runtime Log", font=self.f_card_title, bg=BG, fg=TEXT).pack(side="left")
+
+        btn_open = tk.Label(bar, text="Open Log File", font=self.f_small, bg=PANEL, fg=TEXT,
+                            padx=self.px(10), pady=self.px(4), cursor="hand2",
+                            highlightthickness=1, highlightbackground=LINE)
+        btn_open.pack(side="right", padx=(self.px(6), 0))
+        btn_open.bind("<Button-1>", lambda e: self.open_log_file())
+
+        btn_folder = tk.Label(bar, text="Open Folder", font=self.f_small, bg=PANEL, fg=TEXT,
+                              padx=self.px(10), pady=self.px(4), cursor="hand2",
+                              highlightthickness=1, highlightbackground=LINE)
+        btn_folder.pack(side="right", padx=(self.px(6), 0))
+        btn_folder.bind("<Button-1>", lambda e: self.open_logs())
+
+        btn_ref = tk.Label(bar, text="Refresh", font=self.f_small, bg=PANEL, fg=TEXT,
+                           padx=self.px(10), pady=self.px(4), cursor="hand2",
+                           highlightthickness=1, highlightbackground=LINE)
+        btn_ref.pack(side="right")
+        btn_ref.bind("<Button-1>", lambda e: self.refresh_log_viewer())
+
+        import tkinter.scrolledtext as st
+        self.log_text = st.ScrolledText(page, bg="#0a0806", fg="#d4c5b3", insertbackground=GOLD,
+                                        font=("Consolas", 9), wrap="word", highlightthickness=1,
+                                        highlightbackground=LINE)
+        self.log_text.pack(side="top", fill="both", expand=True)
+        self.refresh_log_viewer()
+        return page
+
+    def open_log_file(self):
+        log = self.latest_log()
+        if log and log.exists():
+            os.startfile(log)
+        else:
+            messagebox.showinfo(APP_TITLE, "No log file found yet. Run the game first.")
+
+    def refresh_log_viewer(self):
+        if not hasattr(self, "log_text"):
+            return
+        log = self.latest_log()
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", "end")
+        if log and log.exists():
+            try:
+                with open(log, "r", encoding="utf-8", errors="replace") as f:
+                    lines = f.readlines()
+                self.log_text.insert("end", "".join(lines[-300:]))
+                self.log_text.see("end")
+            except Exception as e:
+                self.log_text.insert("end", f"Error reading log file: {e}\n")
+        else:
+            self.log_text.insert("end", "No log output yet. Launch a game to generate logs.\n")
+        self.log_text.config(state="disabled")
 
     def select_game(self, key, save=True):
-        if key not in self.cards:
+        if key not in [g["key"] for g in GAMES]:
             key = "u1"
         changed = key != self.config.get("game")
         self.config["game"] = key
-        for k in self.cards:
+        for k in getattr(self, "cards", {}):
             self.draw_card(k)
         if save:
             write_config(self.config)
         if changed:
-            # Each game keeps its own settings: show the selected game's.
             self.reload_ini()
             self.refresh_controls()
+        curr = self.current_game()
+        if hasattr(self, "breadcrumb_lbl"):
+            tagline = curr.get("tagline", f"UNCHARTED {curr['number']} • {curr.get('year', '')}")
+            self.breadcrumb_lbl.config(text=f"{curr['title']}  •  {tagline}")
         if hasattr(self, "status") and not self.process:
-            self.set_status(f"Ready to play {self.current_game()['name']}.")
+            self.set_status(f"Ready to play {curr['name']}.")
         self.update_multiplayer_tab()
 
     def update_multiplayer_tab(self):
@@ -1818,11 +2054,11 @@ class Launcher:
             return
         if self.config.get("game") == "u2":
             if not cell.winfo_manager():
-                cell.pack(side="top", fill="x", padx=self.px(8), pady=self.px(2))
+                cell.pack(side="top", fill="x", padx=self.px(10), pady=self.px(2))
         else:
             cell.pack_forget()
             if getattr(self, "current_tab", None) == "multiplayer":
-                self.show_tab("setup", save=False)
+                self.show_tab("play", save=False)
 
     def game_settings(self):
         """Preset, render resolution and multithreading of the selected game."""
@@ -1890,6 +2126,8 @@ class Launcher:
         self.sync_sharpening()
         if hasattr(self, "preset_cards"):
             self.redraw_presets()
+        if hasattr(self, "library_fs_toggle"):
+            self.library_fs_toggle.set(self.ini.get("display_mode") == "fullscreen")
         self.update_fps_note()
         if hasattr(self, "ini_label"):
             self.ini_label.config(text=f"Settings: {ini_file(self.config['game'])}")
@@ -1953,108 +2191,87 @@ class Launcher:
     def current_game(self):
         return next(g for g in GAMES if g["key"] == self.config.get("game"))
 
-    def build_tabs(self):
-        outer = tk.Frame(self.root, bg=BG)
-        outer.pack(side="top", fill="both", expand=True, padx=self.px(40), pady=(0, self.px(8)))
-
-        # Left Sidebar (Play button + Navigation icons)
-        sidebar_w = self.px(210)
-        self.sidebar = tk.Frame(outer, bg=PANEL, width=sidebar_w, highlightthickness=1, highlightbackground=LINE)
-        self.sidebar.pack(side="left", fill="y", padx=(0, self.px(16)))
-        self.sidebar.pack_propagate(False)
-
-        # Prominent PLAY button at the top of the sidebar
-        sb_play_frame = tk.Frame(self.sidebar, bg=PANEL)
-        sb_play_frame.pack(side="top", fill="x", padx=self.px(12), pady=(self.px(12), self.px(10)))
-        w_play, h_play = sidebar_w - self.px(24), self.px(44)
-        self.sidebar_play_button = tk.Canvas(sb_play_frame, width=w_play, height=h_play, bg=PANEL,
-                                             highlightthickness=0, cursor="hand2")
-        self.sidebar_play_button.pack(side="top", fill="x")
-        self.sidebar_play_button.bind("<Button-1>", lambda e: self.play_or_stop())
-        self.sidebar_play_button.bind("<Enter>", lambda e: self.draw_play(hover=True))
-        self.sidebar_play_button.bind("<Leave>", lambda e: self.draw_play())
-
-        # Divider under Play button
-        tk.Frame(self.sidebar, bg=LINE, height=1).pack(side="top", fill="x", padx=self.px(12), pady=(0, self.px(8)))
-
-        # Navigation category buttons with icons
-        self.tab_buttons = {}
-        self.tab_cells = {}
-        tabs = [
-            ("setup", "Quick Setup", "★"),
-            ("display", "Display", "🖥"),
-            ("performance", "Performance", "⚡"),
-            ("controls", "Controls", "🎮"),
-            ("cheats", "Cheats", "✦"),
-            ("advanced", "Advanced", "⚙"),
-        ]
-        if multiplayer_preview():
-            tabs.append(("multiplayer", "Multiplayer", "👥"))
-
-        for name, label, icon in tabs:
-            cell = tk.Frame(self.sidebar, bg=PANEL, cursor="hand2")
-            cell.pack(side="top", fill="x", padx=self.px(8), pady=self.px(2))
-            bar = tk.Frame(cell, bg=PANEL, width=max(3, self.px(3)))
-            bar.pack(side="left", fill="y")
-            icon_lbl = tk.Label(cell, text=icon, font=("Segoe UI", 11), bg=PANEL, fg=MUTED, width=3, cursor="hand2")
-            icon_lbl.pack(side="left", padx=(self.px(4), 0))
-            text = tk.Label(cell, text=label, font=self.f_tab, bg=PANEL, fg=MUTED, anchor="w", cursor="hand2")
-            text.pack(side="left", fill="x", expand=True, padx=(0, self.px(8)), pady=self.px(8))
-
-            for widget in (cell, icon_lbl, text):
-                widget.bind("<Button-1>", lambda e, n=name: self.show_tab(n))
-                widget.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
-                widget.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
-
-            self.tab_buttons[name] = (cell, bar, icon_lbl, text)
-            self.tab_cells[name] = cell
-
-        # Right Content Body
-        self.body = tk.Frame(outer, bg=BG, height=self.px(340))
-        self.body.pack(side="left", fill="both", expand=True)
-        self.body.pack_propagate(False)
-
-        # Pages taller than the space under the tabs scroll (Display, Performance, Advanced, Controls).
-        self.scroll_canvases = set()
-        self.root.bind_all("<MouseWheel>", self.wheel)
-        self.pages = {
-            "setup": self.page_setup(),
-            "display": self.page_display(),
-            "performance": self.page_performance(),
-            "controls": self.page_controls(),
-            "cheats": self.page_cheats(),
-            "advanced": self.page_advanced(),
-        }
-        if multiplayer_preview():
-            self.pages["multiplayer"] = self.page_multiplayer()
+    def draw_sidebar_icon(self, name, canvas, color):
+        canvas.delete("all")
+        s = self.s
+        def p(coord):
+            return int(coord * s)
+        if name == "play":
+            canvas.create_polygon(p(7), p(5), p(7), p(17), p(17), p(11), fill=color, outline=color)
+        elif name == "presets":
+            lw = max(1, int(1.2 * s))
+            canvas.create_line(p(4), p(6), p(18), p(6), fill=color, width=lw)
+            canvas.create_rectangle(p(12), p(4), p(15), p(8), fill=color, outline=color)
+            canvas.create_line(p(4), p(11), p(18), p(11), fill=color, width=lw)
+            canvas.create_rectangle(p(7), p(9), p(10), p(13), fill=color, outline=color)
+            canvas.create_line(p(4), p(16), p(18), p(16), fill=color, width=lw)
+            canvas.create_rectangle(p(13), p(14), p(16), p(18), fill=color, outline=color)
+        elif name == "display":
+            canvas.create_rectangle(p(3), p(4), p(19), p(15), outline=color, width=max(1, int(1.2 * s)))
+            canvas.create_line(p(11), p(15), p(11), p(18), fill=color, width=max(1, int(1.2 * s)))
+            canvas.create_line(p(7), p(18), p(15), p(18), fill=color, width=max(1, int(1.2 * s)))
+        elif name == "performance":
+            pts = [p(12), p(3), p(6), p(11), p(11), p(11), p(9), p(19), p(16), p(10), p(12), p(10)]
+            canvas.create_polygon(pts, fill=color, outline=color)
+        elif name == "controls":
+            canvas.create_oval(p(3), p(6), p(19), p(16), outline=color, width=max(1, int(1.2 * s)))
+            canvas.create_line(p(6), p(11), p(10), p(11), fill=color, width=max(1, int(1.2 * s)))
+            canvas.create_line(p(8), p(9), p(8), p(13), fill=color, width=max(1, int(1.2 * s)))
+            canvas.create_oval(p(13), p(10), p(15), p(12), fill=color, outline=color)
+            canvas.create_oval(p(15), p(8), p(17), p(10), fill=color, outline=color)
+        elif name == "cheats":
+            pts = [p(11), p(3), p(13), p(9), p(19), p(11), p(13), p(13), p(11), p(19), p(9), p(13), p(3), p(11), p(9), p(9)]
+            canvas.create_polygon(pts, fill=color, outline=color)
+        elif name == "advanced":
+            canvas.create_oval(p(5), p(5), p(17), p(17), outline=color, width=max(1, int(2 * s)))
+            canvas.create_oval(p(9), p(9), p(13), p(13), fill=color, outline=color)
+        elif name == "log":
+            canvas.create_polygon(p(5), p(3), p(13), p(3), p(17), p(7), p(17), p(19), p(5), p(19),
+                                  outline=color, width=max(1, int(1.2 * s)), fill="")
+            canvas.create_line(p(8), p(9), p(14), p(9), fill=color, width=1)
+            canvas.create_line(p(8), p(12), p(14), p(12), fill=color, width=1)
+            canvas.create_line(p(8), p(15), p(12), p(15), fill=color, width=1)
+        elif name == "multiplayer":
+            canvas.create_oval(p(6), p(6), p(11), p(11), fill=color, outline=color)
+            canvas.create_oval(p(12), p(7), p(16), p(11), fill=color, outline=color)
+            canvas.create_arc(p(4), p(12), p(13), p(20), start=0, extent=180, fill=color, outline=color)
+            canvas.create_arc(p(11), p(13), p(18), p(20), start=0, extent=180, fill=color, outline=color)
 
     def hover_tab(self, name, enter):
         if getattr(self, "current_tab", None) != name and name in getattr(self, "tab_buttons", {}):
-            cell, bar, icon_lbl, text = self.tab_buttons[name]
-            bg = "#1f1812" if enter else PANEL
+            cell, bar, icon_canvas, text = self.tab_buttons[name]
+            bg = "#19130e" if enter else "#110d0a"
             fg = TEXT if enter else MUTED
             cell.config(bg=bg)
-            icon_lbl.config(bg=bg, fg=GOLD if enter else MUTED)
+            icon_canvas.config(bg=bg)
             text.config(bg=bg, fg=fg)
+            self.draw_sidebar_icon(name, icon_canvas, GOLD if enter else MUTED)
 
     def show_tab(self, name, save=True):
+        if name == "setup":
+            name = "play"
         if name == "multiplayer" and self.config.get("game") != "u2":
-            name = "setup"
+            name = "play"
+        if name not in self.pages:
+            name = "play"
         self.current_tab = name
         if name == "multiplayer" and not getattr(self, "net_searched", False):
             self.net_searched = True
             self.root.after(300, self.search_net_games)
+        if name == "log":
+            self.refresh_log_viewer()
         if save and self.config.get("tab") != name:
             self.config["tab"] = name
             write_config(self.config)
-        for tab, (cell, bar, icon_lbl, text) in self.tab_buttons.items():
+        for tab, (cell, bar, icon_canvas, text) in self.tab_buttons.items():
             active = tab == name
-            c_bg = "#271f16" if active else PANEL
+            c_bg = "#221a12" if active else "#110d0a"
             c_fg = GOLD if active else MUTED
-            bar.config(bg=GOLD if active else PANEL)
+            bar.config(bg=GOLD if active else "#110d0a")
             cell.config(bg=c_bg)
-            icon_lbl.config(bg=c_bg, fg=c_fg)
+            icon_canvas.config(bg=c_bg)
             text.config(bg=c_bg, fg=TEXT if active else MUTED, font=self.f_body_bold if active else self.f_tab)
+            self.draw_sidebar_icon(tab, icon_canvas, c_fg)
         for tab, page in self.pages.items():
             holder = getattr(page, "holder", page)
             if tab == name:
@@ -2084,14 +2301,18 @@ class Launcher:
         """A tab's page: the frame its rows go in. With `scroll`, it scrolls (with a scrollbar)
         when the rows are taller than the space under the tabs; show_tab packs its holder."""
         if not scroll:
-            return tk.Frame(self.body, bg=BG)
+            frame = tk.Frame(self.body, bg=BG)
+            inner = tk.Frame(frame, bg=BG)
+            inner.pack(fill="both", expand=True, padx=(self.px(28), self.px(20)), pady=(self.px(20), self.px(16)))
+            inner.holder = frame
+            return inner
         holder = tk.Frame(self.body, bg=BG)
         canvas = tk.Canvas(holder, bg=BG, highlightthickness=0)
         bar = ScrollBar(holder, self.s, canvas)
         inner = tk.Frame(canvas, bg=BG)
         window = canvas.create_window((0, 0), window=inner, anchor="nw")
         canvas.configure(yscrollcommand=bar.set)
-        canvas.pack(side="left", fill="both", expand=True)
+        canvas.pack(side="left", fill="both", expand=True, padx=(self.px(28), self.px(16)), pady=(self.px(20), self.px(16)))
 
         def layout(event=None):
             width, height, need = canvas.winfo_width(), canvas.winfo_height(), inner.winfo_reqheight()
@@ -2100,7 +2321,7 @@ class Launcher:
             canvas.itemconfigure(window, width=width)
             canvas.configure(scrollregion=(0, 0, width, max(need, height)))
             if need > height and not bar.winfo_manager():
-                bar.pack(side="right", fill="y", padx=(self.px(8), 0), before=canvas)
+                bar.pack(side="right", fill="y", padx=(0, self.px(8)), pady=(self.px(20), self.px(16)), before=canvas)
             elif need <= height and bar.winfo_manager():
                 bar.pack_forget()
                 canvas.yview_moveto(0)
@@ -2136,30 +2357,7 @@ class Launcher:
         self.widgets[key] = self.row(page, title, hint, factory)
 
     def page_setup(self):
-        page = self.page()
-        self.setup_intro = tk.Label(page, text="", font=self.f_body, bg=BG, fg=MUTED, anchor="w")
-        self.setup_intro.pack(side="top", fill="x", pady=(0, self.px(12)))
-        grid = tk.Frame(page, bg=BG)
-        grid.pack(side="top", fill="x")
-        self.preset_cards = {}
-        gap = self.px(16)
-        # Five presets in 3 + 2: five in one row would squeeze the descriptions at this width.
-        columns = 3
-        card_w = (self.width - 2 * self.px(40) - (columns - 1) * gap) // columns
-        card_h = self.px(170)
-        for i, name in enumerate(PRESET_ORDER):
-            row, column = divmod(i, columns)
-            canvas = tk.Canvas(grid, width=card_w, height=card_h, bg=BG, highlightthickness=0, cursor="hand2")
-            canvas.grid(row=row, column=column, padx=(0 if column == 0 else gap, 0),
-                        pady=(0 if row == 0 else gap, 0), sticky="w")
-            canvas.bind("<Button-1>", lambda e, n=name: self.apply_preset(n))
-            canvas.bind("<Enter>", lambda e, n=name: self.draw_preset(n, hover=True))
-            canvas.bind("<Leave>", lambda e, n=name: self.draw_preset(n))
-            self.preset_cards[name] = (canvas, card_w, card_h)
-        self.custom_note = tk.Label(page, text="", font=self.f_small, bg=BG, fg=MUTED, anchor="w")
-        self.custom_note.pack(side="top", fill="x", pady=(self.px(10), 0))
-        self.root.after_idle(self.redraw_presets)
-        return page
+        return self.pages.get("play")
 
     def draw_preset(self, name, hover=False):
         canvas, w, h = self.preset_cards[name]
@@ -3160,63 +3358,89 @@ class Launcher:
     # -- footer -----------------------------------------------------------------------------
 
     def build_footer(self):
-        footer = tk.Frame(self.root, bg=PANEL)
+        parent = getattr(self, "main_pane", self.root)
+        footer = tk.Frame(parent, bg="#14100c")
         footer.pack(side="bottom", fill="x")
-        tk.Frame(self.root, bg=LINE, height=1).pack(side="bottom", fill="x")
-        inner = tk.Frame(footer, bg=PANEL)
-        inner.pack(fill="x", padx=self.px(40), pady=self.px(14))
-        left = tk.Frame(inner, bg=PANEL)
+        tk.Frame(parent, bg=LINE, height=1).pack(side="bottom", fill="x")
+        inner = tk.Frame(footer, bg="#14100c")
+        inner.pack(fill="x", padx=self.px(28), pady=self.px(12))
+        left = tk.Frame(inner, bg="#14100c")
         left.pack(side="left", fill="x", expand=True)
 
-        status_row = tk.Frame(left, bg=PANEL)
+        status_row = tk.Frame(left, bg="#14100c")
         status_row.pack(side="top", fill="x")
-        self.status_dot = tk.Label(status_row, text="●", font=("Segoe UI", 11), bg=PANEL, fg=ACCENT_GREEN)
+        self.status_dot = tk.Label(status_row, text="●", font=("Segoe UI", 11), bg="#14100c", fg=ACCENT_GREEN)
         self.status_dot.pack(side="left", padx=(0, self.px(8)))
-        self.status = tk.Label(status_row, text="", font=self.f_body_bold, bg=PANEL, fg=TEXT, anchor="w")
+        self.status = tk.Label(status_row, text="", font=self.f_body_bold, bg="#14100c", fg=TEXT, anchor="w")
         self.status.pack(side="left", fill="x")
 
         self.substatus = tk.Label(left, text="In-Game Menu: Insert / L2 + R3   •   Dev Menu: Shift + Backspace",
-                                  font=self.f_small, bg=PANEL, fg=MUTED, anchor="w")
+                                  font=self.f_small, bg="#14100c", fg=MUTED, anchor="w")
         self.substatus.pack(side="top", fill="x", pady=(self.px(2), 0))
 
-        btn_box = tk.Frame(inner, bg=PANEL)
+        btn_box = tk.Frame(inner, bg="#14100c")
         btn_box.pack(side="right")
 
-        self.logs_button = tk.Label(btn_box, text="LOGS", font=self.f_body_bold, bg=PANEL_HI, fg=TEXT,
-                                    padx=self.px(14), pady=self.px(10), cursor="hand2",
-                                    highlightthickness=1, highlightbackground=LINE)
-        self.logs_button.pack(side="left", padx=(0, self.px(12)))
-        self.logs_button.bind("<Button-1>", lambda e: self.open_logs())
-        self.logs_button.bind("<Enter>", lambda e: self.logs_button.config(bg="#2d241c", highlightbackground=GOLD, fg=GOLD))
-        self.logs_button.bind("<Leave>", lambda e: self.logs_button.config(bg=PANEL_HI, highlightbackground=LINE, fg=TEXT))
+        # Stop button (☐ Stop)
+        w_stop, h_btn = self.px(90), self.px(40)
+        self.stop_button = tk.Canvas(btn_box, width=w_stop, height=h_btn, bg="#14100c", highlightthickness=0, cursor="hand2")
+        self.stop_button.pack(side="left", padx=(0, self.px(10)))
+        self.stop_button.bind("<Button-1>", lambda e: self.stop() if self.process else None)
+        self.stop_button.bind("<Enter>", lambda e: self.draw_stop(hover=True))
+        self.stop_button.bind("<Leave>", lambda e: self.draw_stop())
 
-        w, h = self.px(210), self.px(54)
-        self.play_button = tk.Canvas(btn_box, width=w, height=h, bg=PANEL, highlightthickness=0, cursor="hand2")
+        # Play button (▷ Play)
+        w_play = self.px(125)
+        self.play_button = tk.Canvas(btn_box, width=w_play, height=h_btn, bg="#14100c", highlightthickness=0, cursor="hand2")
         self.play_button.pack(side="left")
         self.play_button.bind("<Button-1>", lambda e: self.play_or_stop())
         self.play_button.bind("<Enter>", lambda e: self.draw_play(hover=True))
         self.play_button.bind("<Leave>", lambda e: self.draw_play())
-        self.draw_play()
 
         self.update_button = tk.Label(btn_box, text="UPDATE", font=self.f_body_bold, bg=PANEL_HI, fg=GOLD,
-                                      padx=self.px(16), pady=self.px(10), cursor="hand2",
+                                      padx=self.px(14), pady=self.px(8), cursor="hand2",
                                       highlightthickness=1, highlightbackground=GOLD)
         self.update_button.bind("<Button-1>", lambda e: self.install_update())
+
+        self.draw_stop()
+        self.draw_play()
         self.set_status(f"Ready to play {self.current_game()['name']}." if self.config.get("game") else "Ready.")
 
-    def draw_play(self, hover=False):
+    def draw_stop(self, hover=False):
+        if not hasattr(self, "stop_button"):
+            return
+        canvas = self.stop_button
+        w, h = int(canvas["width"]), int(canvas["height"])
+        canvas.delete("all")
         running = self.process is not None
-        for canvas in (getattr(self, "play_button", None), getattr(self, "sidebar_play_button", None)):
-            if canvas is None:
-                continue
-            w, h = int(canvas["width"]), int(canvas["height"])
-            canvas.delete("all")
-            fill = (STOP_RED if running else (GOLD_HI if hover else GOLD))
-            outline = ("#e06349" if running else ("#ffe6a4" if hover else GOLD))
-            round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if hover else 1)
-            icon = "■ " if running else "▶ "
-            canvas.create_text(w // 2, h // 2, text=icon + ("STOP" if running else "PLAY"), font=self.f_play,
-                               fill=TEXT if running else INK)
+        if running:
+            fill = "#421812" if hover else "#2c130f"
+            outline = STOP_RED
+            text_color = "#f2937e"
+        else:
+            fill = "#14100c"
+            outline = "#2c2116"
+            text_color = "#5a4738"
+        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(6), fill=fill, outline=outline, width=1)
+        canvas.create_text(w // 2, h // 2, text="☐ Stop", font=self.f_body_bold, fill=text_color)
+
+    def draw_play(self, hover=False):
+        if not hasattr(self, "play_button"):
+            return
+        canvas = self.play_button
+        w, h = int(canvas["width"]), int(canvas["height"])
+        canvas.delete("all")
+        running = self.process is not None
+        if running:
+            fill = STOP_RED
+            outline = "#e06349"
+            round_rect(canvas, 2, 2, w - 2, h - 2, self.px(20), fill=fill, outline=outline, width=2 if hover else 1)
+            canvas.create_text(w // 2, h // 2, text="■ Stop", font=self.f_play, fill=TEXT)
+        else:
+            fill = GOLD_HI if hover else GOLD
+            outline = "#ffe6a4" if hover else GOLD
+            round_rect(canvas, 2, 2, w - 2, h - 2, self.px(20), fill=fill, outline=outline, width=2 if hover else 1)
+            canvas.create_text(w // 2, h // 2, text="▷ Play", font=self.f_play, fill=INK)
 
     def set_status(self, text, detail=None):
         self.status.config(text=text)
@@ -3644,6 +3868,12 @@ class Launcher:
                 self.game_started = True
                 self.set_status(f"Playing {self.current_game()['name']}",
                                 "Insert or R3 + L2 opens the in-game menu. STOP closes the game.")
+            elif self.game_started and self.poll_count % 7 == 0:
+                elapsed_s = int(time.time() - getattr(self, "started_at", time.time()))
+                mins, secs = divmod(elapsed_s, 60)
+                hrs, mins = divmod(mins, 60)
+                t_str = f"{hrs:02d}:{mins:02d}:{secs:02d}" if hrs else f"{mins:02d}:{secs:02d}"
+                self.set_status(f"Playing {self.current_game()['name']}  ({t_str})")
         self.root.after(150, self.poll)
 
     def latest_log(self):
@@ -3745,6 +3975,16 @@ class Launcher:
             self.root.destroy()
 
     def finished(self, code):
+        if hasattr(self, "started_at") and self.started_at:
+            session_len = time.time() - self.started_at
+            if session_len > 10:
+                k = self.config.get("game", "u1")
+                if "playtime" not in self.config or not isinstance(self.config["playtime"], dict):
+                    self.config["playtime"] = {}
+                self.config["playtime"][k] = self.config["playtime"].get(k, 0) + session_len
+                write_config(self.config)
+                for c_key in getattr(self, "cards", {}):
+                    self.draw_card(c_key)
         self.process = None
         self.stop_partner()  # local co-op: the second game ends with the first
         self.draw_play()
@@ -4089,7 +4329,7 @@ def main():
     # Its own taskbar identity: without it the launcher's window is grouped under Python
     # (pythonw.exe) and the taskbar shows Python's icon instead of Uncharted's.
     try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("BilalReloaded.Uncharted.Launcher")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Deniz.Uncharted.Launcher")
     except Exception:
         pass
     # --play u1|u2|u3 (or 1/2/3): start that game directly (desktop game shortcuts, GitHub #25).
