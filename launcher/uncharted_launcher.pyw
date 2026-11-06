@@ -152,7 +152,7 @@ CREDITS = ("Credits: DLSS and DLAA use NVIDIA DLSS technology. NVIDIA, RTX and D
 # The author's links in the launcher header: label, address, color, hover color.
 LINKS = (("Patreon", "https://www.patreon.com/c/bilalreloaded", "#f96854", "#ff7f6e"),
          ("YouTube", "https://www.youtube.com/@BilalReloaded/videos", "#d6302a", "#ef4038"),
-         ("GitHub", "https://github.com/bc160201983", "#24292f", "#3a4048"))
+         ("GitHub", "https://github.com/DenizVibe/Uncharted-PC-Port", "#24292f", "#3a4048"))
 
 def multiplayer_preview():
     """The Multiplayer page (Uncharted 2 over the network, 25 Oct 2026) is hidden until it
@@ -209,18 +209,20 @@ GAMES = [
      "exe": "big3-ps4_Shipping.elf", "log": "big3-ps4_Shipping"},
 ]
 
-# Palette: the Collection's parchment and gold over a dark leather brown.
-BG = "#120e0a"
-PANEL = "#1b1510"
-PANEL_HI = "#251d16"
-LINE = "#3a2e22"
-TEXT = "#f1e6cf"
-MUTED = "#a8977a"
-DIM = "#6f604b"
-GOLD = "#d4a24c"
-GOLD_HI = "#e9bc66"
-INK = "#2a1c0e"
-STOP_RED = "#b5533c"
+# Palette: refined adventure dark theme (rich charcoal-parchment and lustrous gold).
+BG = "#0f0c09"
+PANEL = "#16120e"
+PANEL_HI = "#221c16"
+LINE = "#352a1e"
+TEXT = "#f6ede0"
+MUTED = "#ab9a82"
+DIM = "#70614e"
+GOLD = "#dfb15b"
+GOLD_HI = "#f4cf82"
+INK = "#1e140b"
+STOP_RED = "#c54c34"
+ACCENT_GREEN = "#3ec074"
+ACCENT_AMBER = "#e59b38"
 
 # At most 120: faster, the game's movement timing breaks (Drake's Fortune at 140-160 FPS: running
 # slows, Nate fell through the world). The runtime caps older, faster settings at 120 too.
@@ -1739,7 +1741,7 @@ class Launcher:
         self.cards = {}
         gap = self.px(16)
         card_w = (self.width - 2 * self.px(40) - 2 * gap) // 3
-        card_h = self.px(72)
+        card_h = self.px(80)
         for i, game in enumerate(GAMES):
             canvas = tk.Canvas(frame, width=card_w, height=card_h, bg=BG, highlightthickness=0, cursor="hand2")
             canvas.grid(row=0, column=i, padx=(0 if i == 0 else gap, 0))
@@ -1754,17 +1756,45 @@ class Launcher:
         selected = key == self.config.get("game")
         canvas.delete("all")
         fill = PANEL_HI if selected or hover else PANEL
-        outline = GOLD if selected else ("#5a4733" if hover else LINE)
+        outline = GOLD if selected else ("#4e3d2c" if hover else LINE)
         round_rect(canvas, 2, 2, w - 2, h - 2, self.px(10), fill=fill, outline=outline, width=2 if selected else 1)
-        canvas.create_text(self.px(22), h // 2, text=game["number"], font=self.f_card_number,
-                           fill=GOLD if selected else DIM, anchor="w")
-        canvas.create_text(self.px(66), h // 2 - self.px(10), text=game["title"], font=self.f_card_title,
+
+        # Number badge container
+        num_box_w = self.px(36)
+        num_box_h = self.px(36)
+        nb_x1 = self.px(14)
+        nb_y1 = h // 2 - num_box_h // 2
+        nb_x2 = nb_x1 + num_box_w
+        nb_y2 = nb_y1 + num_box_h
+        round_rect(canvas, nb_x1, nb_y1, nb_x2, nb_y2, self.px(6),
+                   fill="#292017" if selected else "#1a1510",
+                   outline=GOLD if selected else LINE, width=1)
+        canvas.create_text((nb_x1 + nb_x2) // 2, (nb_y1 + nb_y2) // 2, text=game["number"], font=self.f_card_number,
+                           fill=GOLD if selected else DIM, anchor="center")
+
+        # Titles and profile details
+        canvas.create_text(self.px(58), h // 2 - self.px(12), text=game["title"], font=self.f_card_title,
                            fill=TEXT, anchor="w")
-        canvas.create_text(self.px(67), h // 2 + self.px(13), text=game["subtitle"], font=self.f_small,
-                           fill=MUTED, anchor="w")
+
+        # Dynamic profile status
+        settings = self.config.get("games", {}).get(key, {})
+        preset = str(settings.get("preset", "Medium")).capitalize()
+        res = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p"))).upper()
+        detail_text = f"Uncharted {game['number']}   •   {preset} ({res})"
+        canvas.create_text(self.px(59), h // 2 + self.px(13), text=detail_text, font=self.f_small,
+                           fill=GOLD if selected else MUTED, anchor="w")
+
         if selected:
-            canvas.create_text(w - self.px(18), self.px(16), text="SELECTED", font=("Segoe UI Semibold", 7),
-                               fill=GOLD, anchor="e")
+            # Active status badge
+            pill_w = self.px(60)
+            pill_h = self.px(18)
+            px2 = w - self.px(14)
+            px1 = px2 - pill_w
+            py1 = self.px(12)
+            py2 = py1 + pill_h
+            round_rect(canvas, px1, py1, px2, py2, self.px(4), fill="#2e2316", outline=GOLD, width=1)
+            canvas.create_text((px1 + px2) // 2, (py1 + py2) // 2, text="ACTIVE", font=self.f_caps,
+                               fill=GOLD, anchor="center")
 
     def select_game(self, key, save=True):
         if key not in self.cards:
@@ -1945,6 +1975,8 @@ class Launcher:
             bar.pack(side="top", fill="x")
             for widget in (cell, text):
                 widget.bind("<Button-1>", lambda e, n=name: self.show_tab(n))
+            text.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
+            text.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
             self.tab_buttons[name] = (text, bar)
             self.tab_cells[name] = cell
         tk.Frame(outer, bg=LINE, height=1).pack(side="top", fill="x")
@@ -1964,6 +1996,11 @@ class Launcher:
         }
         if multiplayer_preview():
             self.pages["multiplayer"] = self.page_multiplayer()
+
+    def hover_tab(self, name, enter):
+        if getattr(self, "current_tab", None) != name and name in getattr(self, "tab_buttons", {}):
+            text, _ = self.tab_buttons[name]
+            text.config(fg=TEXT if enter else MUTED)
 
     def show_tab(self, name, save=True):
         if name == "multiplayer" and self.config.get("game") != "u2":
@@ -2666,7 +2703,14 @@ class Launcher:
     def page_cheats(self):
         page = self.page()
         tk.Label(page, text="The games' own developer switches, applied when a game starts. They need update 1.02.",
-                 font=self.f_small, bg=BG, fg=MUTED, anchor="w").pack(side="top", fill="x", pady=(0, self.px(6)))
+                 font=self.f_small, bg=BG, fg=MUTED, anchor="w").pack(side="top", fill="x", pady=(0, self.px(8)))
+
+        info_frame = tk.Frame(page, bg="#1e1812", highlightthickness=1, highlightbackground=LINE)
+        info_frame.pack(side="top", fill="x", pady=(0, self.px(12)), padx=self.px(2))
+        tk.Label(info_frame, text="DEV MENU SHORTCUTS", font=self.f_caps, bg="#1e1812", fg=GOLD, anchor="w").pack(side="top", fill="x", padx=self.px(12), pady=(self.px(8), 0))
+        tk.Label(info_frame, text="Keyboard: Shift + Backspace (Main Menu)  •  Shift + Tab (Quick Menu)  •  Shift + V (Free-Cam)\nController: L3 + Touchpad Right (Main Menu)  •  L3 + Touchpad Left (Quick Menu)  •  L3 + R3 (Free-Cam)",
+                 font=self.f_small, bg="#1e1812", fg=TEXT, justify="left", anchor="w").pack(side="top", fill="x", padx=self.px(12), pady=(self.px(4), self.px(8)))
+
         for name, title, hint in CHEATS:
             def cheat(parent, key="cheat_" + name):
                 return Toggle(parent, self.s, self.config.get(key, False), lambda v, k=key: self.change_config(k, v))
@@ -3083,19 +3127,38 @@ class Launcher:
         inner.pack(fill="x", padx=self.px(40), pady=self.px(14))
         left = tk.Frame(inner, bg=PANEL)
         left.pack(side="left", fill="x", expand=True)
-        self.status = tk.Label(left, text="", font=self.f_body_bold, bg=PANEL, fg=TEXT, anchor="w")
-        self.status.pack(side="top", fill="x")
-        self.substatus = tk.Label(left, text="Insert or R3 + L2 in game opens the menu.", font=self.f_small,
-                                  bg=PANEL, fg=MUTED, anchor="w")
-        self.substatus.pack(side="top", fill="x")
+
+        status_row = tk.Frame(left, bg=PANEL)
+        status_row.pack(side="top", fill="x")
+        self.status_dot = tk.Label(status_row, text="●", font=("Segoe UI", 11), bg=PANEL, fg=ACCENT_GREEN)
+        self.status_dot.pack(side="left", padx=(0, self.px(8)))
+        self.status = tk.Label(status_row, text="", font=self.f_body_bold, bg=PANEL, fg=TEXT, anchor="w")
+        self.status.pack(side="left", fill="x")
+
+        self.substatus = tk.Label(left, text="In-Game Menu: Insert / L2 + R3   •   Dev Menu: Shift + Backspace",
+                                  font=self.f_small, bg=PANEL, fg=MUTED, anchor="w")
+        self.substatus.pack(side="top", fill="x", pady=(self.px(2), 0))
+
+        btn_box = tk.Frame(inner, bg=PANEL)
+        btn_box.pack(side="right")
+
+        self.logs_button = tk.Label(btn_box, text="LOGS", font=self.f_body_bold, bg=PANEL_HI, fg=TEXT,
+                                    padx=self.px(14), pady=self.px(10), cursor="hand2",
+                                    highlightthickness=1, highlightbackground=LINE)
+        self.logs_button.pack(side="left", padx=(0, self.px(12)))
+        self.logs_button.bind("<Button-1>", lambda e: self.open_logs())
+        self.logs_button.bind("<Enter>", lambda e: self.logs_button.config(bg="#2d241c", highlightbackground=GOLD, fg=GOLD))
+        self.logs_button.bind("<Leave>", lambda e: self.logs_button.config(bg=PANEL_HI, highlightbackground=LINE, fg=TEXT))
+
         w, h = self.px(210), self.px(54)
-        self.play_button = tk.Canvas(inner, width=w, height=h, bg=PANEL, highlightthickness=0, cursor="hand2")
-        self.play_button.pack(side="right")
+        self.play_button = tk.Canvas(btn_box, width=w, height=h, bg=PANEL, highlightthickness=0, cursor="hand2")
+        self.play_button.pack(side="left")
         self.play_button.bind("<Button-1>", lambda e: self.play_or_stop())
         self.play_button.bind("<Enter>", lambda e: self.draw_play(hover=True))
         self.play_button.bind("<Leave>", lambda e: self.draw_play())
         self.draw_play()
-        self.update_button = tk.Label(inner, text="UPDATE", font=self.f_body_bold, bg=PANEL_HI, fg=GOLD,
+
+        self.update_button = tk.Label(btn_box, text="UPDATE", font=self.f_body_bold, bg=PANEL_HI, fg=GOLD,
                                       padx=self.px(16), pady=self.px(10), cursor="hand2",
                                       highlightthickness=1, highlightbackground=GOLD)
         self.update_button.bind("<Button-1>", lambda e: self.install_update())
@@ -3107,7 +3170,8 @@ class Launcher:
         canvas.delete("all")
         running = self.process is not None
         fill = (STOP_RED if running else (GOLD_HI if hover else GOLD))
-        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=fill)
+        outline = ("#e06349" if running else ("#ffe6a4" if hover else GOLD))
+        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if hover else 1)
         canvas.create_text(w // 2, h // 2, text="STOP" if running else "PLAY", font=self.f_play,
                            fill=TEXT if running else INK)
 
@@ -3115,6 +3179,16 @@ class Launcher:
         self.status.config(text=text)
         if detail is not None:
             self.substatus.config(text=detail)
+        if hasattr(self, "status_dot"):
+            lower = text.lower()
+            if self.process is not None or "playing" in lower:
+                self.status_dot.config(fg="#4ea8de")  # Cyan / active
+            elif "starting" in lower or "preparing" in lower:
+                self.status_dot.config(fg=ACCENT_AMBER)
+            elif "froze" in lower or "stopped" in lower or "error" in lower:
+                self.status_dot.config(fg=STOP_RED)
+            else:
+                self.status_dot.config(fg=ACCENT_GREEN)
 
     # -- updates (launcher/updater.py) ------------------------------------------------------
 
