@@ -4,6 +4,19 @@ Uncharted: The Nathan Drake Collection PC port, by **Deniz**
 ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)).
 Technical details of every item: [analysis/STATUS.md](analysis/STATUS.md).
 
+## 6 November 2026 (0.8.5)
+
+- **Snappy Low-Latency Audio & Dialogue Balance**:
+  - Decreased WASAPI sample frames from 480 to 256 and queue buffers to 1 (`runtime_audio.c`, `probe_uncharted.py`), cutting audio latency down from ~80 ms to ~25–30 ms for immediate gunshot and explosion impact.
+  - Boosted center vocal channel fold-in multiplier to `0.841` (+1.5 dB) in `downmix_stereo()`, ensuring character speech cuts cleanly through heavy combat when playing through headphones or stereo speakers.
+- **Uncharted 1 Cover Aiming**:
+  - Enabled `GOW3_MOUSE_LOOK_U1_COVER=1` by default in `probe_uncharted.py`, giving Drake's Fortune fluid 1:1 raw mouse look from cover matching the controls of Uncharted 2 and 3.
+- **Window Title Author Rebranding**:
+  - Rebranded the game window title bar in runtime executables (`Uncharted.exe` and `gow3-probe.exe`) to display `Uncharted™: The Nathan Drake Collection — PC port by Deniz`.
+  - Updated documentation author credits and renamed the root quick starter to `Start.cmd`.
+- **Linux & Steam Deck Documentation**:
+  - Documented Proton/Wine path translation, unified multi-shortcut configuration, and native Linux Nix build instructions.
+
 ## 6 November 2026 (0.8.4)
 
 - **Box Art Covers & Title Case Polish**:

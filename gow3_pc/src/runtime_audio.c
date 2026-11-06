@@ -67,7 +67,7 @@ static int sdl_audio(void) {
         /* Device buffer: SDL's default adds latency on WASAPI. GOW3_AUDIO_DEVICE_FRAMES
            overrides the 480-frame (10 ms) request. */
         const char *frames=getenv("GOW3_AUDIO_DEVICE_FRAMES");
-        SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES,frames && *frames ? frames : "480");
+        SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES,frames && *frames ? frames : "256");
         sdl_ready = (!mode || strcmp(mode,"none")) && SDL_InitSubSystem(SDL_INIT_AUDIO);
         printf("Runtime: audio backend %s\n", sdl_ready ? SDL_GetCurrentAudioDriver() : "timer (silent)");
     }
@@ -87,17 +87,18 @@ static int port_range(int type, int *first, int *last) {
 }
 /* SDL's 7.1-to-stereo matrix keeps only ~0.21 of the front channels (-13.5 dB), so the game
    was far too quiet on stereo outputs. Folds SDL-ordered FL FR C LFE BL BR SL SR frames to
-   stereo in place: fronts at full level, center and surrounds at -3 dB, LFE dropped, clamped.
-   Returns the stereo byte count. */
+   stereo in place: fronts at full level, center dialogue with +1.5 dB clarity boost (0.841)
+   and surrounds at -3 dB (0.707), LFE dropped, clamped. Returns the stereo byte count. */
 static size_t downmix_stereo(unsigned char *buf, size_t frames, int is_float) {
     const float k=0.70710678f;
+    const float kc=0.84139514f; /* center voice channel +1.5 dB boost for speech clarity */
     for (size_t f=0;f<frames;++f) {
         float s[8], lr[2];
         for (int c=0;c<8;++c) {
             if (is_float) memcpy(&s[c],buf+(f*8+(size_t)c)*4,4);
             else { int16_t v; memcpy(&v,buf+(f*8+(size_t)c)*2,2); s[c]=(float)v/32768.0f; }
         }
-        lr[0]=s[0]+k*(s[2]+s[4]+s[6]); lr[1]=s[1]+k*(s[2]+s[5]+s[7]);
+        lr[0]=s[0]+kc*s[2]+k*(s[4]+s[6]); lr[1]=s[1]+kc*s[2]+k*(s[5]+s[7]);
         for (int c=0;c<2;++c) {
             float v=lr[c]<-1.0f ? -1.0f : lr[c]>1.0f ? 1.0f : lr[c];
             if (is_float) memcpy(buf+(f*2+(size_t)c)*4,&v,4);

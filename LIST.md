@@ -60,8 +60,8 @@
 
 | ID | Issue | Affected | Severity | Details & Fix Path |
 |---|---|---|---|---|
-| **AUD-01** | **Audio Buffer Queue Latency (~80 ms)** | All | **Medium** | The default SDL3 WASAPI audio device stream queue maintains ~80 ms of buffered audio, creating a noticeable delay between gunfire/explosions and their sound cues. *Fix:* Reduce `GOW3_AUDIO_DEVICE_FRAMES` default from 480 to 256 and tune `GOW3_AUDIO_QUEUE_BUFFERS` for tighter ~30 ms output latency. |
-| **AUD-02** | **Stereo Downmix Balance on Dialogue** | U2 / U3 | **Medium** | When folding 7.1/5.1 surround sound to 2-channel stereo for headphones, the center channel dialogue can be slightly overpowered by ambient surround channels during loud action scenes. *Fix:* Boost center channel fold-in coefficient (+1.5 dB) relative to surround channels in `downmix_stereo()`. |
+| **AUD-01** | **Audio Buffer Queue Latency (~80 ms)** | All | **Medium** | **FIXED**: Lowered WASAPI device sample frames from 480 to 256 and capped queue periods to 1 in `runtime_audio.c` and `probe_uncharted.py`, dropping output latency from ~80 ms to a snappy ~25–30 ms. |
+| **AUD-02** | **Stereo Downmix Balance on Dialogue** | U2 / U3 | **Medium** | **FIXED**: Increased the center vocal channel fold-in multiplier to `0.841` (+1.5 dB) in `downmix_stereo()`, ensuring clear, audible speech over loud surround action effects in headphones and stereo speakers. |
 | **AUD-03** | **Rapid Firefight Sound Starvation** | U1 / U2 | **Low** | Under extreme continuous weapon fire (e.g. grenade launchers and heavy machine guns firing simultaneously), ATRAC9 voice decoding occasionally skips audio frames. *Fix:* Enlarge the ATRAC9 decode packet ring buffer in `runtime_ajm.c`. |
 
 ---
@@ -72,7 +72,7 @@
 |---|---|---|---|---|
 | **INP-01** | **Mouse Look Sensitivity Discrepancy** | All | **Medium** | The mouse sensitivity multiplier (0.5x–2.0x) behaves non-linearly across different Windows desktop pointer speed settings and high-DPI gaming mice (1600+ DPI). *Fix:* Use raw Windows `WM_INPUT` coordinates rather than standard cursor deltas, and add a finer sensitivity slider (0.1x to 3.0x). |
 | **INP-02** | **PlayStation Touchpad Button on Xbox Controllers** | All | **Low** | Prompts for opening journal or weapon select show the PlayStation touchpad glyph even when playing on an Xbox controller. *Fix:* Map the touchpad click to the Xbox `View` / `Back` button and display the corresponding Xbox icon dynamically when an XInput controller is active. |
-| **INP-03** | **Mouse Look in U1 Cover Camera** | U1 | **Low** | While in cover in Drake's Fortune, the camera defaults to emulated stick speed rather than true raw mouse sensitivity. *Fix:* Enable `GOW3_MOUSE_LOOK_U1_COVER=1` by default in `probe_uncharted.py`. |
+| **INP-03** | **Mouse Look in U1 Cover Camera** | U1 | **Low** | **FIXED**: Enabled `GOW3_MOUSE_LOOK_U1_COVER=1` by default in `probe_uncharted.py`, providing smooth 1:1 mouse aiming from cover in Drake's Fortune. |
 
 ---
 

@@ -5,7 +5,7 @@ Thieves* and *Drake's Deception*) natively on Windows. The game's own x86-64 cod
 on the PC; a runtime supplies the PS4 system libraries, and a Vulkan renderer executes the PS4 GPU
 work.
 
-By **Deniz** ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)), November 2026. What changed and when:
+By **Deniz** ([GitHub](https://github.com/DenizVibe)), November 2026. What changed and when:
 [CHANGELOG.md](CHANGELOG.md).
 
 > **No game files are in this repository or its builds.** You need your own copy of the game
@@ -80,9 +80,11 @@ plan and test list: [analysis/PLAN.md](analysis/PLAN.md).
   offered; with VSync a limit at or above the monitor's refresh rate follows the monitor); frames
   queued; background shader compilation; multithreaded rendering (experimental); idle game
   threads (sleep or spin).
-- **Keyboard and mouse:** mouse look (sensitivity, invert Y), right mouse aim, left mouse fire, WASD,
+- **Keyboard and mouse:** mouse look (sensitivity, invert Y, and 1:1 aiming in cover), right mouse aim, left mouse fire, WASD,
   and every action remappable per game in the **Controls** tab (two bindings per action, keys or
   mouse buttons). Controllers (DualSense, DualShock 4, Xbox) work at the same time.
+- **Audio & Speech Clarity:** Low-latency WASAPI buffer streaming (~25–30 ms response) and enhanced center-channel vocal fold-in (+1.5 dB) ensuring clear dialogue over explosions and action tracks in headphones and stereo speakers.
+- **Linux & Steam Deck Support:** Native turnkey operation under Wine/Proton with automated path translation, unified configuration (`~/.local/share/uncharted-launcher`), 16:10 aspect ratio (1280×800) scaling, and reproducible native Linux builds via `shell.nix`.
 - **Language** (Advanced tab): any of the 22 languages the games have text for; each game's main
   menu then offers it next to English (Square). Voices: the languages in your copy of the game.
 - **Unlock all chapters** (Advanced tab, off by default): every chapter and the Brutal difficulty

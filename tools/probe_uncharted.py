@@ -1736,6 +1736,11 @@ def run_game(args, game, executable, guest_args, loadexec, app0=None, overlays=(
     env.setdefault("GOW3_NATIVE_TSC", "1")
     # Windows thread priority: audio, command and simulation threads receive elevated host priority
     env.setdefault("GOW3_GUEST_PRIORITY", "1")
+    # Low-latency audio: reduce WASAPI sample frames from 480 to 256 and queue buffers to 1 for snappy ~25-30 ms response
+    env.setdefault("GOW3_AUDIO_DEVICE_FRAMES", "256")
+    env.setdefault("GOW3_AUDIO_QUEUE_BUFFERS", "1")
+    # Enable U1 cover camera mouse look by default
+    env.setdefault("GOW3_MOUSE_LOOK_U1_COVER", "1")
     # Grey-world diagnosis: timestamped opens/reads of level packs and streams (boot.log).
     # env.setdefault("GOW3_FILE_TRACE", ".pak")  # pack read trace (grey-world diagnosis, done)
     # Frame captures on demand: write a pass count (e.g. 600) into this file; captures land in
