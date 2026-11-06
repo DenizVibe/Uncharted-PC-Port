@@ -1818,7 +1818,7 @@ class Launcher:
             return
         if self.config.get("game") == "u2":
             if not cell.winfo_manager():
-                cell.pack(side="left", padx=(0, self.px(26)))
+                cell.pack(side="top", fill="x", padx=self.px(8), pady=self.px(2))
         else:
             cell.pack_forget()
             if getattr(self, "current_tab", None) == "multiplayer":
@@ -1955,32 +1955,65 @@ class Launcher:
 
     def build_tabs(self):
         outer = tk.Frame(self.root, bg=BG)
-        outer.pack(side="top", fill="both", expand=True, padx=self.px(40))
-        strip = tk.Frame(outer, bg=BG)
-        strip.pack(side="top", fill="x")
+        outer.pack(side="top", fill="both", expand=True, padx=self.px(40), pady=(0, self.px(8)))
+
+        # Left Sidebar (Play button + Navigation icons)
+        sidebar_w = self.px(210)
+        self.sidebar = tk.Frame(outer, bg=PANEL, width=sidebar_w, highlightthickness=1, highlightbackground=LINE)
+        self.sidebar.pack(side="left", fill="y", padx=(0, self.px(16)))
+        self.sidebar.pack_propagate(False)
+
+        # Prominent PLAY button at the top of the sidebar
+        sb_play_frame = tk.Frame(self.sidebar, bg=PANEL)
+        sb_play_frame.pack(side="top", fill="x", padx=self.px(12), pady=(self.px(12), self.px(10)))
+        w_play, h_play = sidebar_w - self.px(24), self.px(44)
+        self.sidebar_play_button = tk.Canvas(sb_play_frame, width=w_play, height=h_play, bg=PANEL,
+                                             highlightthickness=0, cursor="hand2")
+        self.sidebar_play_button.pack(side="top", fill="x")
+        self.sidebar_play_button.bind("<Button-1>", lambda e: self.play_or_stop())
+        self.sidebar_play_button.bind("<Enter>", lambda e: self.draw_play(hover=True))
+        self.sidebar_play_button.bind("<Leave>", lambda e: self.draw_play())
+
+        # Divider under Play button
+        tk.Frame(self.sidebar, bg=LINE, height=1).pack(side="top", fill="x", padx=self.px(12), pady=(0, self.px(8)))
+
+        # Navigation category buttons with icons
         self.tab_buttons = {}
         self.tab_cells = {}
-        tabs = [("setup", "QUICK SETUP"), ("display", "DISPLAY"), ("performance", "PERFORMANCE"),
-                ("controls", "CONTROLS"), ("cheats", "CHEATS"), ("advanced", "ADVANCED")]
+        tabs = [
+            ("setup", "Quick Setup", "★"),
+            ("display", "Display", "🖥"),
+            ("performance", "Performance", "⚡"),
+            ("controls", "Controls", "🎮"),
+            ("cheats", "Cheats", "✦"),
+            ("advanced", "Advanced", "⚙"),
+        ]
         if multiplayer_preview():
-            tabs.append(("multiplayer", "MULTIPLAYER"))
-        for name, label in tabs:
-            cell = tk.Frame(strip, bg=BG)
-            cell.pack(side="left", padx=(0, self.px(26)))
-            text = tk.Label(cell, text=label, font=self.f_tab, bg=BG, fg=MUTED, cursor="hand2")
-            text.pack(side="top", pady=(0, self.px(6)))
-            bar = tk.Frame(cell, bg=BG, height=max(2, self.px(2)))
-            bar.pack(side="top", fill="x")
-            for widget in (cell, text):
+            tabs.append(("multiplayer", "Multiplayer", "👥"))
+
+        for name, label, icon in tabs:
+            cell = tk.Frame(self.sidebar, bg=PANEL, cursor="hand2")
+            cell.pack(side="top", fill="x", padx=self.px(8), pady=self.px(2))
+            bar = tk.Frame(cell, bg=PANEL, width=max(3, self.px(3)))
+            bar.pack(side="left", fill="y")
+            icon_lbl = tk.Label(cell, text=icon, font=("Segoe UI", 11), bg=PANEL, fg=MUTED, width=3, cursor="hand2")
+            icon_lbl.pack(side="left", padx=(self.px(4), 0))
+            text = tk.Label(cell, text=label, font=self.f_tab, bg=PANEL, fg=MUTED, anchor="w", cursor="hand2")
+            text.pack(side="left", fill="x", expand=True, padx=(0, self.px(8)), pady=self.px(8))
+
+            for widget in (cell, icon_lbl, text):
                 widget.bind("<Button-1>", lambda e, n=name: self.show_tab(n))
-            text.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
-            text.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
-            self.tab_buttons[name] = (text, bar)
+                widget.bind("<Enter>", lambda e, n=name: self.hover_tab(n, True))
+                widget.bind("<Leave>", lambda e, n=name: self.hover_tab(n, False))
+
+            self.tab_buttons[name] = (cell, bar, icon_lbl, text)
             self.tab_cells[name] = cell
-        tk.Frame(outer, bg=LINE, height=1).pack(side="top", fill="x")
-        self.body = tk.Frame(outer, bg=BG, height=self.px(330))
-        self.body.pack(side="top", fill="both", expand=True, pady=(self.px(14), 0))
+
+        # Right Content Body
+        self.body = tk.Frame(outer, bg=BG, height=self.px(340))
+        self.body.pack(side="left", fill="both", expand=True)
         self.body.pack_propagate(False)
+
         # Pages taller than the space under the tabs scroll (Display, Performance, Advanced, Controls).
         self.scroll_canvases = set()
         self.root.bind_all("<MouseWheel>", self.wheel)
@@ -1997,8 +2030,12 @@ class Launcher:
 
     def hover_tab(self, name, enter):
         if getattr(self, "current_tab", None) != name and name in getattr(self, "tab_buttons", {}):
-            text, _ = self.tab_buttons[name]
-            text.config(fg=TEXT if enter else MUTED)
+            cell, bar, icon_lbl, text = self.tab_buttons[name]
+            bg = "#1f1812" if enter else PANEL
+            fg = TEXT if enter else MUTED
+            cell.config(bg=bg)
+            icon_lbl.config(bg=bg, fg=GOLD if enter else MUTED)
+            text.config(bg=bg, fg=fg)
 
     def show_tab(self, name, save=True):
         if name == "multiplayer" and self.config.get("game") != "u2":
@@ -2010,9 +2047,14 @@ class Launcher:
         if save and self.config.get("tab") != name:
             self.config["tab"] = name
             write_config(self.config)
-        for tab, (text, bar) in self.tab_buttons.items():
-            text.config(fg=TEXT if tab == name else MUTED)
-            bar.config(bg=GOLD if tab == name else BG)
+        for tab, (cell, bar, icon_lbl, text) in self.tab_buttons.items():
+            active = tab == name
+            c_bg = "#271f16" if active else PANEL
+            c_fg = GOLD if active else MUTED
+            bar.config(bg=GOLD if active else PANEL)
+            cell.config(bg=c_bg)
+            icon_lbl.config(bg=c_bg, fg=c_fg)
+            text.config(bg=c_bg, fg=TEXT if active else MUTED, font=self.f_body_bold if active else self.f_tab)
         for tab, page in self.pages.items():
             holder = getattr(page, "holder", page)
             if tab == name:
@@ -3163,15 +3205,18 @@ class Launcher:
         self.set_status(f"Ready to play {self.current_game()['name']}." if self.config.get("game") else "Ready.")
 
     def draw_play(self, hover=False):
-        canvas = self.play_button
-        w, h = int(canvas["width"]), int(canvas["height"])
-        canvas.delete("all")
         running = self.process is not None
-        fill = (STOP_RED if running else (GOLD_HI if hover else GOLD))
-        outline = ("#e06349" if running else ("#ffe6a4" if hover else GOLD))
-        round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if hover else 1)
-        canvas.create_text(w // 2, h // 2, text="STOP" if running else "PLAY", font=self.f_play,
-                           fill=TEXT if running else INK)
+        for canvas in (getattr(self, "play_button", None), getattr(self, "sidebar_play_button", None)):
+            if canvas is None:
+                continue
+            w, h = int(canvas["width"]), int(canvas["height"])
+            canvas.delete("all")
+            fill = (STOP_RED if running else (GOLD_HI if hover else GOLD))
+            outline = ("#e06349" if running else ("#ffe6a4" if hover else GOLD))
+            round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if hover else 1)
+            icon = "■ " if running else "▶ "
+            canvas.create_text(w // 2, h // 2, text=icon + ("STOP" if running else "PLAY"), font=self.f_play,
+                               fill=TEXT if running else INK)
 
     def set_status(self, text, detail=None):
         self.status.config(text=text)
