@@ -199,14 +199,14 @@ def net_games():
 
 
 GAMES = [
-    {"key": "u1", "number": "1", "title": "DRAKE'S FORTUNE", "name": "Uncharted: Drake's Fortune",
-     "year": "2007", "tagline": "UNCHARTED 1 • 2007", "subtitle": "Uncharted 1  •  double-click to play",
+    {"key": "u1", "number": "1", "title": "Drake's Fortune", "name": "Uncharted: Drake's Fortune",
+     "year": "2007", "tagline": "Uncharted 1 • 2007", "subtitle": "Uncharted 1  •  double-click to play",
      "exe": "eboot.bin", "log": "uncharted"},
-    {"key": "u2", "number": "2", "title": "AMONG THIEVES", "name": "Uncharted 2: Among Thieves",
-     "year": "2009", "tagline": "UNCHARTED 2 • 2009", "subtitle": "Uncharted 2  •  double-click to play",
+    {"key": "u2", "number": "2", "title": "Among Thieves", "name": "Uncharted 2: Among Thieves",
+     "year": "2009", "tagline": "Uncharted 2 • 2009", "subtitle": "Uncharted 2  •  double-click to play",
      "exe": "big2-ps4_Shipping.elf", "log": "big2-ps4_Shipping"},
-    {"key": "u3", "number": "3", "title": "DRAKE'S DECEPTION", "name": "Uncharted 3: Drake's Deception",
-     "year": "2011", "tagline": "UNCHARTED 3 • 2011", "subtitle": "Uncharted 3  •  double-click to play",
+    {"key": "u3", "number": "3", "title": "Drake's Deception", "name": "Uncharted 3: Drake's Deception",
+     "year": "2011", "tagline": "Uncharted 3 • 2011", "subtitle": "Uncharted 3  •  double-click to play",
      "exe": "big3-ps4_Shipping.elf", "log": "big3-ps4_Shipping"},
 ]
 
@@ -1681,8 +1681,37 @@ class Launcher:
             root.after(100, self.play_direct)
 
     def center_window(self):
-        """Center the launcher window in the middle of the screen."""
+        """Center the launcher window on the active monitor containing the cursor."""
         self.root.update_idletasks()
+        try:
+            import ctypes
+            from ctypes import wintypes
+            class POINT(ctypes.Structure):
+                _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+            class RECT(ctypes.Structure):
+                _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
+                            ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+            class MONITORINFO(ctypes.Structure):
+                _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", RECT),
+                            ("rcWork", RECT), ("dwFlags", wintypes.DWORD)]
+
+            pt = POINT()
+            ctypes.windll.user32.GetCursorPos(ctypes.byref(pt))
+            h_mon = ctypes.windll.user32.MonitorFromPoint(pt, 2)  # MONITOR_DEFAULTTONEAREST
+            mi = MONITORINFO()
+            mi.cbSize = ctypes.sizeof(MONITORINFO)
+            if ctypes.windll.user32.GetMonitorInfoW(h_mon, ctypes.byref(mi)):
+                work_left = mi.rcWork.left
+                work_top = mi.rcWork.top
+                work_w = mi.rcWork.right - mi.rcWork.left
+                work_h = mi.rcWork.bottom - mi.rcWork.top
+                x = work_left + max(0, (work_w - self.width) // 2)
+                y = work_top + max(0, (work_h - self.height) // 2)
+                self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
+                return
+        except Exception:
+            pass
+
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
         x = max(0, (screen_w - self.width) // 2)
@@ -1787,7 +1816,7 @@ class Launcher:
             ("controls", "Controls"),
             ("cheats", "Cheats"),
             ("advanced", "Advanced"),
-            ("log", "Log"),
+            ("log", "Live Log"),
         ]
         if multiplayer_preview():
             tabs.append(("multiplayer", "Multiplayer"))
@@ -1873,7 +1902,7 @@ class Launcher:
         gap = self.px(16)
         avail = self.width - self.px(220) - self.px(28) * 2
         card_w = (avail - (columns - 1) * gap) // columns
-        card_h = self.px(82)
+        card_h = self.px(86)
 
         for i, game in enumerate(GAMES):
             cards_frame.columnconfigure(i, weight=1)
@@ -1967,7 +1996,7 @@ class Launcher:
         gap = self.px(14)
         avail_w = self.width - self.px(220) - self.px(28) - self.px(20) - self.px(16)
         card_w = (avail_w - (columns - 1) * gap) // columns
-        card_h = self.px(82)
+        card_h = self.px(86)
 
         for i, game in enumerate(GAMES):
             game_cards_frame.columnconfigure(i, weight=1)
@@ -2003,12 +2032,53 @@ class Launcher:
 
     def on_preset_game_change(self, key):
         self.select_game(key)
+        if hasattr(self, "redraw_presets") and getattr(self, "preset_cards", None):
+            self.redraw_presets()
 
     def toggle_library_fullscreen(self, enabled):
         mode = "fullscreen" if enabled else "windowed"
         self.change("display_mode", mode)
         if "display_mode" in self.widgets and hasattr(self.widgets["display_mode"], "set"):
             self.widgets["display_mode"].set(mode)
+
+    def get_card_cover_photo(self, number, w, h, radius=4):
+        if not hasattr(self, "_card_cover_cache"):
+            self._card_cover_cache = {}
+        key = (str(number), w, h, radius)
+        if key in self._card_cover_cache:
+            return self._card_cover_cache[key]
+
+        candidates = [
+            ASSETS / f"{number}.jpg",
+            ROOT / "u3mp" / "assets" / f"{number}.jpg",
+            ROOT / "assets" / f"{number}.jpg",
+        ]
+        img_path = None
+        for p in candidates:
+            if p.is_file():
+                img_path = p
+                break
+
+        if not img_path:
+            return None
+
+        try:
+            with Image.open(img_path) as im:
+                im = im.convert("RGBA")
+                res = im.resize((w, h), Image.Resampling.LANCZOS)
+                mask = Image.new("L", (w, h), 0)
+                mask_draw = ImageDraw.Draw(mask)
+                mask_draw.rounded_rectangle([0, 0, w, h], radius=radius, fill=255)
+                out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+                out.paste(res, (0, 0), mask=mask)
+                border_draw = ImageDraw.Draw(out)
+                border_draw.rounded_rectangle([0, 0, w - 1, h - 1], radius=radius,
+                                              outline=(74, 55, 38, 220), width=1)
+                photo = ImageTk.PhotoImage(out)
+                self._card_cover_cache[key] = photo
+                return photo
+        except Exception:
+            return None
 
     def draw_card(self, key, hover=False):
         for card_dict in (getattr(self, "cards", {}), getattr(self, "preset_game_cards", {})):
@@ -2022,20 +2092,36 @@ class Launcher:
             outline = GOLD if selected else ("#4a3726" if hover else "#241c14")
             round_rect(canvas, 2, 2, w - 2, h - 2, self.px(8), fill=fill, outline=outline, width=2 if selected else 1)
 
-            tx = self.px(18)
-            # Line 1: Title
-            canvas.create_text(tx, self.px(24), text=game["title"], font=self.f_card_title,
+            # Box art thumbnail
+            thumb_h = h - self.px(16)
+            thumb_w = int(thumb_h * 0.80)
+            thumb_x = self.px(9)
+            thumb_y = (h - thumb_h) // 2
+
+            cover_photo = self.get_card_cover_photo(game.get("number", "1"), thumb_w, thumb_h, radius=self.px(4))
+            if cover_photo:
+                canvas.create_image(thumb_x, thumb_y, image=cover_photo, anchor="nw")
+                if not hasattr(canvas, "_cover_refs"):
+                    canvas._cover_refs = {}
+                canvas._cover_refs[game.get("number")] = cover_photo
+                tx = thumb_x + thumb_w + self.px(11)
+            else:
+                tx = self.px(18)
+
+            # Line 1: Title (Title Case)
+            canvas.create_text(tx, self.px(25), text=game["title"], font=self.f_card_title,
                                fill=GOLD if selected else TEXT, anchor="w")
 
-            # Line 2: Subtitle
-            canvas.create_text(tx, self.px(44), text=game.get("tagline", f"UNCHARTED {game['number']}"),
+            # Line 2: Subtitle (Title Case)
+            canvas.create_text(tx, self.px(46), text=game.get("tagline", f"Uncharted {game['number']}"),
                                font=("Segoe UI Semibold", 8), fill=MUTED, anchor="w")
 
             # Line 3: Setting indicator
             settings = self.config.get("games", {}).get(key, {})
             preset = str(settings.get("preset", "Medium")).capitalize()
-            res = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p"))).upper()
-            canvas.create_text(tx, self.px(62), text=f"{preset} Preset  •  {res}",
+            res_val = str(settings.get("resolution") or ("1620p" if key == "u1" else ("4K" if preset.lower() == "ultra" else "1080p")))
+            res = res_val.upper() if res_val.lower().endswith("p") or res_val.upper() == "4K" else res_val
+            canvas.create_text(tx, self.px(64), text=f"{preset} Preset  •  {res}",
                                font=self.f_small, fill=GOLD if selected else DIM, anchor="w")
 
     def page_log(self):
@@ -2159,6 +2245,8 @@ class Launcher:
         if changed:
             self.reload_ini()
             self.refresh_controls()
+            if hasattr(self, "redraw_presets") and getattr(self, "preset_cards", None):
+                self.redraw_presets()
         curr = self.current_game()
         if hasattr(self, "status") and not self.process:
             self.set_status(f"Ready to play {curr['name']}.")
@@ -2611,6 +2699,10 @@ class Launcher:
                 upscale, values["fps_limit"] = "ultra", "30"
             elif kind == "strong":
                 upscale = "quality"
+        elif name == "ultra" and self.current_game()["key"] == "u1":
+            # Drake's Fortune caps at 1620p native rendering to keep animation heaps within 2 GiB
+            resolution = "2880x1620"
+            values["fsr1"] = "1"
         settings["resolution"] = resolution
         settings["upscale"] = upscale
         if "resolution" in self.widgets:
@@ -3775,6 +3867,8 @@ class Launcher:
         self.change("upscaler", value)
 
     def change_resolution(self, value):
+        if value == "3840x2160" and self.current_game()["key"] == "u1":
+            value = "2880x1620"
         self.game_settings()["resolution"] = value
         self.game_settings()["preset"] = "custom"
         write_config(self.config)

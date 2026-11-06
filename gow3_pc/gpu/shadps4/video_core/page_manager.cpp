@@ -166,15 +166,22 @@ struct PageManager::Impl {
         if (fault_page != last_fault_page) {
             last_fault_page = fault_page;
             fault_repeats = 0;
-        } else if (++fault_repeats >= 4 && self && (addr >> PM_PAGE_BITS) < NUM_ADDRESS_PAGES &&
-                   self->cached_pages[addr >> PM_PAGE_BITS].num_read_watchers != 0) {
-            // (Only guest addresses: the SRT walker's garbage pointers fault at -1, reported for
-            // non-canonical addresses; indexing the page table with that faulted inside this
-            // handler, again and again: Uncharted 3 froze, 18 Oct evening.)
-            // Only a read-protected page (a readback holds it) can keep an instruction faulting;
-            // write faults repeat on hot pages the GPU keeps writing (not stuck).
-            fault_repeats = 0;
-            rasterizer->ReleaseStuckPage(fault_page, Common::IsWriteError(context), is_gpu_thread);
+        } else if (++fault_repeats >= 4) {
+            if (self && (addr >> PM_PAGE_BITS) < NUM_ADDRESS_PAGES &&
+                self->cached_pages[addr >> PM_PAGE_BITS].num_read_watchers != 0) {
+                // (Only guest addresses: the SRT walker's garbage pointers fault at -1, reported for
+                // non-canonical addresses; indexing the page table with that faulted inside this
+                // handler, again and again: Uncharted 3 froze, 18 Oct evening.)
+                // Only a read-protected page (a readback holds it) can keep an instruction faulting;
+                // write faults repeat on hot pages the GPU keeps writing (not stuck).
+                fault_repeats = 0;
+                rasterizer->ReleaseStuckPage(fault_page, Common::IsWriteError(context), is_gpu_thread);
+            } else if (fault_repeats >= 16) {
+                // Safety failsafe: if an instruction faults 16 times consecutively on the same page,
+                // unprotect and release the page to prevent an infinite nested fault hang/deadlock.
+                fault_repeats = 0;
+                rasterizer->ReleaseStuckPage(fault_page, Common::IsWriteError(context), is_gpu_thread);
+            }
         }
         if (Common::IsWriteError(context)) {
             Gow3Stats::Timer timer{Gow3Stats::t_write_faults};

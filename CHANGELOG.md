@@ -4,6 +4,21 @@ Uncharted: The Nathan Drake Collection PC port, by **Deniz**
 ([GitHub](https://github.com/DenizVibe/Uncharted-PC-Port)).
 Technical details of every item: [analysis/STATUS.md](analysis/STATUS.md).
 
+## 6 November 2026 (0.8.4)
+
+- **Box Art Covers & Title Case Polish**:
+  - Embedded portrait cover art (`1.jpg`, `2.jpg`, `3.jpg`) into the library and presets selection cards with smooth Lanczos resampling, anti-aliased rounded corners, and subtle warm borders.
+  - Converted uppercase card headers and taglines to clean Title Case (`Drake's Fortune`, `Among Thieves`, `Drake's Deception`, and `Uncharted 1-3 • Year`).
+- **Live Log Tab & Navigation Improvements**:
+  - Renamed the runtime logging navigation tab to **Live Log**.
+  - Enhanced multi-monitor window centering (`MonitorFromPoint` / `GetMonitorInfoW`) on the display where the cursor resides.
+  - Added instant card state synchronization when toggling games in the Presets tab.
+- **Engine Stability Hardening**:
+  - Hardened page manager fault handlers (`page_manager.cpp`) with a 16-trap release failsafe to prevent infinite nested fault loops.
+  - Guarded Drake's Fortune (U1) against animation heap exhaustion above 1620p native resolution.
+- **Project Tracking**:
+  - Added `LIST.md` auditing all open bugs, visual anomalies, input edge cases, and technical roadmap items.
+
 ## 6 November 2026 (0.8.3)
 
 - **Authentic PS4 Trophy Unlock Sound**:
