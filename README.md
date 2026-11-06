@@ -1,4 +1,4 @@
-![alt text](image.png)# Uncharted: The Nathan Drake Collection — PC port
+# Uncharted: The Nathan Drake Collection — PC port
 
 Run the PS4 **Uncharted: The Nathan Drake Collection** (CUSA02344: *Drake's Fortune*, *Among
 Thieves* and *Drake's Deception*) natively on Windows. The game's own x86-64 code runs directly
