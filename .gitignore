@@ -25,6 +25,9 @@
 /Uncharted.lnk
 __pycache__/
 *.pyc
+*.obj
+*.exp
+*.pdb
 # Personal test launchers (multiplayer lobby and map tests) kept next to the port.
 /Lancer-UC2-*.cmd
 /Salon-UC2-*.cmd
